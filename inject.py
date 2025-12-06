@@ -10,6 +10,7 @@ ln = len(data)
 rem = 0x587ff if (ln < 0x587ff) else (0x587ff - ln)
 data += b'\x00' * rem
 open(path, "wb").write(data[0:0x587ff])
+print(ln)
 
 path = build + "jump.bin"
 data = bytearray(open(path, "rb").read())
@@ -18,7 +19,7 @@ ln = min(len(data), 0xba)
 path = fs + "VIDEO_TS" + os.sep + "VTS_02_0.IFO"
 ifo = bytearray(open(path, "rb").read())
 ifo[0x25c:0x25c + ln] = data
-ifo[0x20e2:0x20e2 + 4] = b"\x07\x0b\x07\x0b"
+ifo[0x20e0:0x20e0 + 6] = b"\xff\xff\xff\xff\xff\xff"
 open(path, "wb").write(ifo)
 
 path = fs + "VIDEO_TS" + os.sep + "VTS_01_1.VOB"

@@ -3,14 +3,12 @@
 
 #include "ps2int.h"
 
-typedef int (*sceSifSyncIop_t)(void);
-typedef int (*sceSifResetIop_t)(const char *, int);
-typedef int (*sceSifRebootIop_t)(const char *);
 typedef void (*sceSifWriteBackDCache_t)(void *, u32);
+typedef int (*sceSifLoadModuleBuffer_t)(void *, int, char *);
+typedef int (*_sceSifLoadModuleBuffer_t)(void *, u32, const char *, int *);
 
-extern sceSifSyncIop_t sceSifSyncIop;
-extern sceSifResetIop_t sceSifResetIop;
-extern sceSifRebootIop_t sceSifRebootIop;
 extern sceSifWriteBackDCache_t sceSifWriteBackDCache;
+extern sceSifLoadModuleBuffer_t sceSifLoadModuleBuffer;
+extern _sceSifLoadModuleBuffer_t _sceSifLoadModuleBuffer;
 
 #endif

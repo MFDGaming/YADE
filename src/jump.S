@@ -10,7 +10,7 @@ li $a1, 0x00915df0 # gp
 li $a2, 0 # argc
 li $a3, 0 # argv
 li $v1, 0x07 # ExecPS2
-#syscall 0x07
+syscall 0x07
 
 read_code:
 la $a0, empty_str # name

@@ -4,14 +4,28 @@
 #include "ps2cdvd.h"
 #include "ps2cstd.h"
 #include "ps2misc.h"
+#include "ps2iop.h"
 
 int readSector(int n, u8 *s) {
+    const int max_tries = 30;
+    int tries = 0;
     sceCdRMode rm;
-    rm.spindlctrl = SCECdSpinStm;
+    rm.spindlctrl = SCECdSpinNom;
     rm.datapattern = SCECdSecS2048;
-    rm.trycount = 0xff;
-    sceCdReadDVDV(n, 1, s, &rm);
+    rm.trycount = max_tries;
+
+    while (tries < max_tries) {
+		sceCdDiskReady(0);
+		if (sceCdReadDVDV(n, 1, s, &rm)) {
+			break;
+		}
+		++tries;
+	}
+    if (tries == max_tries) {
+		return -1;
+	}
     sceCdSync(0);
+    return 0;
 }
 
 int readDiscData(int off, u8 *dest, int len) {
@@ -38,12 +52,14 @@ int readDiscData(int off, u8 *dest, int len) {
         readSector(s, tmp);
         memcpy(dest, &tmp[12], rem);
     }
+    sceSifWriteBackDCache(dest, len);
 }
 
 void main() {
-    int off = 1242 << 11;
+    int off = 1239 << 11;
+
     sceCdInit(SCECdINIT);
-    sceCdDiskReady(0);
+
     Elf32_Ehdr ehdr;
     readDiscData(off, (u8 *)&ehdr, sizeof(Elf32_Ehdr));
     for (int i = 0; i < ehdr.e_phnum; i++) {

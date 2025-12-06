@@ -34,3 +34,17 @@ asm (
     "syscall 0x42 \n"
     "jr $ra"
 );
+asm (
+    ".global sceSifSetDma \n"
+    "sceSifSetDma: \n"
+    "li $v1, 0x77 \n"
+    "syscall 0x77 \n"
+    "jr $ra"
+);
+asm (
+    ".global sceSifDmaStat \n"
+    "sceSifDmaStat: \n"
+    "li $v1, 0x76 \n"
+    "syscall 0x76 \n"
+    "jr $ra"
+);
