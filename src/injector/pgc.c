@@ -2,9 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MIN(x, y) (x > y ? y : x)
-#define MAX(x, y) (x > y ? x : y)
-
 static void write8(uint8_t *buffer, uint32_t *off, uint8_t val) {
     buffer[(*off)++] = val;
 }
