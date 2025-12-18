@@ -120,20 +120,20 @@ int main() {
 
     uint8_t buf[24] = {
         0x00, // VM_current_cmd_type_index
-        0x07, // VM_current_cmd_index
+        0x00, // VM_current_cmd_index
         0x00, 0x00, // padding
         0xa8, 0x1d, 0x55, 0x01, // VM_current_cmd_data
         0x01, // DAT_01558e48
         0x00, // padding
         VM_CMD_PARSER_SWITCH_INDEX_VAL & 0xff, // FP_INDEX_lo
         (VM_CMD_PARSER_SWITCH_INDEX_VAL >> 8) & 0xff, // FP_INDEX_lo_hi
-        0x01, 0x00, // VM_current_opcode_type
-        0x01, // VM_current_opcode_direct
+        0x00, 0x00, // VM_current_opcode_type
+        0x00, // VM_current_opcode_direct
         0x00, // padding
         0x00, 0x00, // VM_current_opcode_set
         0x00, 0x00, // VM_current_opcode_dir_cmp
         0x03, 0x00, // VM_current_opcode_cmp
-        0x02, 0x00 // VM_current_opcode_cmd
+        0x00, 0x00 // VM_current_opcode_cmd
     };
 
     FILE *fp = fopen("./build/jump.bin", "rb");
