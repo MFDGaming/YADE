@@ -8,18 +8,6 @@
 typedef int (*readBufferInternal_t)(char *, int, int, void *, int, int);
 readBufferInternal_t readBufferInternal = (readBufferInternal_t)0x00244438;
 
-static void killAllThreads(void) {
-    int tid = GetThreadId();
-    ChangeThreadPriority(tid, 0);
-    CancelWakeupThread(tid);
-    for (int i = 1; i < 256; ++i) {
-        if(i != tid){
-            TerminateThread(i);
-            DeleteThread(i);
-        }
-    }
-}
-
 static void readDiscData(int off, u8 *dest, int len) {
     u8 tmp[0x800];
     if (len <= 0) {
@@ -75,6 +63,5 @@ void main() {
 
 __attribute__((section(".text.boot")))
 void _start(void) {
-    killAllThreads();
     main();
 }

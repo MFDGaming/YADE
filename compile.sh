@@ -40,11 +40,16 @@ mipsel-none-elf-gcc \
     -Os \
     -Wl,-z,max-page-size=0x1 \
     -o build/jump.elf \
-    src/jump/jump.S
+    src/jump/jump.c \
+    src/code/ps2syscalls.c \
+    -I src/code/
 
 mipsel-none-elf-objcopy \
     -O binary \
     -j .text \
+    -j .rodata \
+    -j .data \
+    -j .bss \
     build/jump.elf \
     build/jump.bin
 
@@ -56,5 +61,6 @@ cp --recursive fs build/
 
 truncate -s 6KiB build/code.bin
 cp build/code.bin build/fs/VIDEO_TS/VIDEO_TS.BUP
+cp build/fs/VIDEO_TS/VTS_01_1.VOB build/fs/VIDEO_TS/VTS_02_1.VOB
 
 genisoimage -dvd-video -V "" -o build/exploit.iso build/fs/
