@@ -1,6 +1,6 @@
 #include "ps2cstd.h"
 
-void *memcpy(void *dest, void *src, unsigned int n) {
+void *memcpy(void *dest, const void *src, unsigned int n) {
     unsigned char *d = dest;
     const unsigned char *s = src;
     while (n--) {
@@ -9,7 +9,7 @@ void *memcpy(void *dest, void *src, unsigned int n) {
     return dest;
 }
 
-void *memmove(void *dest, void *src, unsigned int n) {
+void *memmove(void *dest, const void *src, unsigned int n) {
     unsigned char *d = dest;
     const unsigned char *s = src;
     if (d == s || n == 0) {

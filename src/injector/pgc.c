@@ -133,8 +133,8 @@ static void write_c_pbit(pgc_t *pgc, uint8_t *buf) {
 }
 
 static void write_c_posit(pgc_t *pgc, uint8_t *buf) {
-    if (pgc->pgc_gi.c_pbit_sa) {
-        uint32_t off = pgc->pgc_gi.c_pbit_sa;
+    if (pgc->pgc_gi.c_posit_sa) {
+        uint32_t off = pgc->pgc_gi.c_posit_sa;
         for (int i = 0; i < (pgc->pgc_gi.get_pgc_cnt_cn()); ++i) {
             write16(buf, &off, pgc->c_posit.c_posi[i].c_vob_idn);
             write8(buf, &off, pgc->c_posit.c_posi[i].reserved);
