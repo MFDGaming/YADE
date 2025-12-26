@@ -142,7 +142,7 @@ typedef struct {
     uint16_t c_vob_idn;
     uint8_t reserved;
     uint8_t c_idn;
-} c_posi_t; 
+} c_posi_t;
 
 typedef struct {
     c_posi_t c_posi[255];

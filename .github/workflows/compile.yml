@@ -1,0 +1,23 @@
+name: Build YADE Exploit
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ghcr.io/ps2homebrew/ps2homebrew:main
+    steps:
+    - name: git checkout
+      uses: actions/checkout@v6
+
+    - name: Compile
+      run: ./compile.sh
+
+    - name: Upload ISO Artifact
+      uses: actions/upload-artifact@v6
+      with:
+        name: YADE-exploit-${{ github.sha }}
+        path: build/exploit.iso
+        if-no-files-found: error

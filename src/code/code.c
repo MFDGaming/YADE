@@ -41,14 +41,24 @@ void main() {
     int off = (391 - 281) << 11;
     Elf32_Ehdr ehdr;
     readDiscData(off, (u8 *)&ehdr, sizeof(Elf32_Ehdr));
+
+    // Validate ELF header
+    if (ehdr.e_phnum > 256 || ehdr.e_phnum == 0) {
+        return;  // Invalid program header count
+    }
+
     for (int i = 0; i < ehdr.e_phnum; i++) {
         Elf32_Phdr phdr;
         int phdr_off = off + ehdr.e_phoff + (i * sizeof(Elf32_Phdr));
         readDiscData(phdr_off, (u8 *)&phdr, sizeof(Elf32_Phdr));
         if (phdr.p_type == PT_LOAD) {
-            readDiscData(off + phdr.p_offset, (u8 *)phdr.p_vaddr, phdr.p_filesz);
+            // Validate segment sizes to prevent overflow
+            if (phdr.p_memsz > 0x2000000 || phdr.p_filesz > phdr.p_memsz) {
+                continue;  // Skip invalid segments
+            }
+            readDiscData(off + phdr.p_offset, (u8 *)(unsigned long)phdr.p_vaddr, phdr.p_filesz);
             if(phdr.p_memsz > phdr.p_filesz) {
-                memset((u8 *)phdr.p_vaddr + phdr.p_filesz, 0, phdr.p_memsz - phdr.p_filesz);
+                memset((u8 *)(unsigned long)phdr.p_vaddr + phdr.p_filesz, 0, phdr.p_memsz - phdr.p_filesz);
             }
         }
     }
@@ -58,7 +68,7 @@ void main() {
     while(!sceSifSyncIop());
     sceSifInitRpc(0);
     sceSifExitRpc();
-    ExecPS2((void *)ehdr.e_entry, 0, 0, NULL);
+    ExecPS2((void *)(unsigned long)ehdr.e_entry, 0, 0, NULL);
 }
 
 __attribute__((section(".text.boot")))

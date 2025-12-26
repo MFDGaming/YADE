@@ -121,7 +121,8 @@ static void write_pgc_pgmap(pgc_t *pgc, uint8_t *buf) {
 static void write_c_pbit(pgc_t *pgc, uint8_t *buf) {
     if (pgc->pgc_gi.c_pbit_sa) {
         uint32_t off = pgc->pgc_gi.c_pbit_sa;
-        for (int i = 0; i < (pgc->pgc_gi.get_pgc_cnt_cn()); ++i) {
+        uint32_t cn = pgc->pgc_gi.get_pgc_cnt_cn();
+        for (uint32_t i = 0; i < cn; ++i) {
             write32(buf, &off, pgc->c_pbit.pbi[i].c_cat);
             write32(buf, &off, pgc->c_pbit.pbi[i].c_pbtm);
             write32(buf, &off, pgc->c_pbit.pbi[i].c_fvobu_sa);
@@ -133,9 +134,10 @@ static void write_c_pbit(pgc_t *pgc, uint8_t *buf) {
 }
 
 static void write_c_posit(pgc_t *pgc, uint8_t *buf) {
-    if (pgc->pgc_gi.c_pbit_sa) {
-        uint32_t off = pgc->pgc_gi.c_pbit_sa;
-        for (int i = 0; i < (pgc->pgc_gi.get_pgc_cnt_cn()); ++i) {
+    if (pgc->pgc_gi.c_posit_sa) {
+        uint32_t off = pgc->pgc_gi.c_posit_sa;
+        uint32_t cn = pgc->pgc_gi.get_pgc_cnt_cn();
+        for (uint32_t i = 0; i < cn; ++i) {
             write16(buf, &off, pgc->c_posit.c_posi[i].c_vob_idn);
             write8(buf, &off, pgc->c_posit.c_posi[i].reserved);
             write8(buf, &off, pgc->c_posit.c_posi[i].c_idn);
