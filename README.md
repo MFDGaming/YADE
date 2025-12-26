@@ -47,10 +47,6 @@ The exploit works by:
 3. Redirecting execution to custom code loaded from the disc
 4. Loading and executing a custom ELF binary
 
-## License
-
-This is a proof-of-concept exploit for research purposes. Use at your own risk.
-
 ## Disclaimer
 
 This software is provided for educational and research purposes only. The authors are not responsible for any misuse or damage caused by this software. Only use this on hardware you own.
