@@ -39,24 +39,6 @@ This will:
 - `src/ld/` - Linker scripts for PS2 binaries
 - `fs/` - Base DVD-Video filesystem structure
 
-## Security Considerations
-
-⚠️ **This is exploit code - use responsibly!**
-
-This repository contains code that exploits a security vulnerability. It is intended for:
-- Educational purposes
-- Security research
-- Running homebrew on your own PS2 hardware
-
-### Known Security Issues (Fixed)
-
-The following security issues were identified and fixed:
-
-1. **Buffer Overflow Protection** - Added bounds checking for ELF header validation
-2. **Input Validation** - Added validation for file sizes and memory operations
-3. **Error Handling** - Comprehensive error checking for all file and memory operations
-4. **Memory Safety** - Fixed potential memory leaks and null pointer dereferences
-
 ## Technical Details
 
 The exploit works by:
@@ -65,7 +47,7 @@ The exploit works by:
 3. Redirecting execution to custom code loaded from the disc
 4. Loading and executing a custom ELF binary
 
-The exploit targets specific memory addresses in the PS2 DVD player:
+The exploit targets specific memory addresses in the PS2 DVD player 3.00E:
 - `VM_CMD_PARSER_SWITCH_ADDR`: 0x00909208
 - `JUMP_POINTER`: 0x0090ec20
 - `VM_ADDR`: 0x01558e40
