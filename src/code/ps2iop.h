@@ -1,5 +1,5 @@
-#ifndef YADE_PS2MISC
-#define YADE_PS2MISC
+#ifndef YADE_PS2IOP
+#define YADE_PS2IOP
 
 #include "ps2int.h"
 

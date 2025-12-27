@@ -2,11 +2,36 @@
 #include "ps2elf.h"
 #include "ps2int.h"
 #include "ps2cstd.h"
-#include "ps2misc.h"
+#include "ps2iop.h"
 #include "ps2rpc.h"
 
 typedef int (*readBufferInternal_t)(char *, int, int, void *, int, int);
-readBufferInternal_t readBufferInternal = (readBufferInternal_t)0x00244438;
+readBufferInternal_t readBufferInternal;
+
+static void setup_pointers() {
+    u32 *video_ts_ifo_300e = (u32 *)0x009091a0;
+    u32 *video_ts_ifo_300u = (u32 *)0x009090a0;
+    u32 *video_ts_ifo_300j = (u32 *)0x00684920;
+    if (video_ts_ifo_300e[0] == 0x45444956) {
+        readBufferInternal = (readBufferInternal_t)0x00244438;
+        sceSifSyncIop = (sceSifSyncIop_t)0x00283460;
+        sceSifResetIop = (sceSifResetIop_t)0x002832f8;
+        sceSifInitRpc = (sceSifInitRpc_t)0x00207c60;
+        sceSifExitRpc = (sceSifExitRpc_t)0x00207e00;
+    } else if (video_ts_ifo_300u[0] == 0x45444956) {
+        readBufferInternal = (readBufferInternal_t)0x00244378;
+        sceSifSyncIop = (sceSifSyncIop_t)0x00283340;
+        sceSifResetIop = (sceSifResetIop_t)0x002831d8;
+        sceSifInitRpc = (sceSifInitRpc_t)0x00207c60;
+        sceSifExitRpc = (sceSifExitRpc_t)0x00207e00;
+    } else if (video_ts_ifo_300j[0] == 0x45444956) {
+        readBufferInternal = (readBufferInternal_t)0x00244018;
+        sceSifSyncIop = (sceSifSyncIop_t)0x002834f0;
+        sceSifResetIop = (sceSifResetIop_t)0x00283388;
+        sceSifInitRpc = (sceSifInitRpc_t)0x00207c60;
+        sceSifExitRpc = (sceSifExitRpc_t)0x00207e00;
+    }
+}
 
 static void readDiscData(int off, u8 *dest, int len) {
     u8 tmp[0x800];
@@ -73,5 +98,6 @@ void main() {
 
 __attribute__((section(".text.boot")))
 void _start(void) {
+    setup_pointers();
     main();
 }
