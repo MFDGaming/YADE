@@ -1,5 +1,7 @@
 cd "$(dirname "$0")"
 
+dvd_ver="300E"
+
 rm -rf build
 mkdir build
 rm -f fs/VIDEO_TS/VTS_01_0.IFO
@@ -34,7 +36,8 @@ mipsel-none-elf-objcopy \
     build/code.bin
 
 mipsel-none-elf-gcc \
-    -Wl,--defsym=V300E=1 \
+    -DV$dvd_ver \
+    -Wl,--defsym=V$dvd_ver=1 \
     -T src/ld/jump.ld \
     -march=r5900 \
     -mabi=eabi \
@@ -60,7 +63,7 @@ mipsel-none-elf-objcopy \
     build/jump.elf \
     build/jump.bin
 
-gcc -DV300E src/injector/*.c -o build/injector.elf
+gcc -DV$dvd_ver src/injector/*.c -o build/injector.elf
 
 cp --recursive fs build/
 

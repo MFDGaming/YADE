@@ -89,8 +89,8 @@ void main() {
     }
     FlushCache(0);
     FlushCache(2);
-    sceSifResetIop("rom0:UDNL rom0:EELOADCNF", 0);
-    while(!sceSifSyncIop());
+    /*sceSifResetIop("rom0:UDNL rom0:EELOADCNF", 0);
+    while(!sceSifSyncIop());*/
     sceSifInitRpc(0);
     sceSifExitRpc();
     ExecPS2((void *)(unsigned long)ehdr.e_entry, 0, 0, NULL);

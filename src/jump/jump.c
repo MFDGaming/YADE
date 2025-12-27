@@ -1,7 +1,15 @@
 #include "ps2syscalls.h"
 
+#ifdef V300E
+#define RBI_ADDR 0x00244438
+#elif V300U
+#define RBI_ADDR 0x00244378
+#elif V300J
+#define RBI_ADDR 0x00244018
+#endif
+
 typedef int (*readBufferInternal_t)(char *, int, int, void *, int, int);
-readBufferInternal_t readBufferInternal = (readBufferInternal_t)0x00244438;
+readBufferInternal_t readBufferInternal = (readBufferInternal_t)RBI_ADDR;
 
 typedef void (*code_t)(void);
 code_t code = (code_t)((void *)(0x2000000 - (0x800 * 2)));
