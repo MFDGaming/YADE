@@ -34,6 +34,7 @@ mipsel-none-elf-objcopy \
     build/code.bin
 
 mipsel-none-elf-gcc \
+    -Wl,--defsym=V300E=1 \
     -T src/ld/jump.ld \
     -march=r5900 \
     -mabi=eabi \
