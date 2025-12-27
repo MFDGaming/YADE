@@ -63,7 +63,7 @@ static void readDiscData(int off, u8 *dest, int len) {
 }
 
 void main() {
-    int off = (391 - 281) << 11;
+    int off = (396 - 278) << 11;
     Elf32_Ehdr ehdr;
     readDiscData(off, (u8 *)&ehdr, sizeof(Elf32_Ehdr));
 

