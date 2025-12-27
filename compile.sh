@@ -60,7 +60,7 @@ mipsel-none-elf-objcopy \
     build/jump.elf \
     build/jump.bin
 
-gcc src/injector/*.c -o build/injector.elf
+gcc -DV300E src/injector/*.c -o build/injector.elf
 
 cp --recursive fs build/
 
