@@ -13,11 +13,18 @@ jobs:
       uses: actions/checkout@v6
 
     - name: Compile
-      run: ./compile.sh
+      run: |
+        mkdir -p release
+        ./compile.sh 3.00E
+        mv build/exploit.iso release/exploit_3.00E_3.00A.iso
+        ./compile.sh 3.00U
+        mv build/exploit.iso release/exploit_3.00U.iso
+        ./compile.sh 3.00J
+        mv build/exploit.iso release/exploit_3.00J.iso
 
     - name: Upload ISO Artifact
       uses: actions/upload-artifact@v6
       with:
         name: YADE-exploit-${{ github.sha }}
-        path: build/exploit.iso
+        path: release/
         if-no-files-found: error
