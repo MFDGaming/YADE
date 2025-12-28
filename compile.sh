@@ -2,6 +2,16 @@ cd "$(dirname "$0")"
 
 dvd_ver="300E"
 
+if [ ${1,,} == "3.00j" ]; then
+    echo "Building for DVD Player v3.00J"
+    dvd_ver="300J"
+elif [ ${1,,} == "3.00u" ]; then
+    echo "Building for DVD Player v3.00U"
+    dvd_ver="300U"
+else
+    echo "Building for DVD Player v3.00E/A"
+fi
+
 rm -rf build
 mkdir build
 rm -f fs/VIDEO_TS/VTS_01_0.IFO
