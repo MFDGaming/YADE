@@ -156,7 +156,10 @@ int main() {
         0x00, // VM_current_cmd_type_index
         0x00, // VM_current_cmd_index
         0x00, 0x00, // padding
-        0xa8, 0x1d, 0x55, 0x01, // VM_current_cmd_data
+        CMD_DATA_ADDR & 0xff, // VM_current_cmd_data_lo_lo
+        (CMD_DATA_ADDR >> 8) & 0xff, // VM_current_cmd_data_lo_hi
+        (CMD_DATA_ADDR >> 16) & 0xff, // VM_current_cmd_data_hi_lo
+        (CMD_DATA_ADDR >> 24) & 0xff, // VM_current_cmd_data_hi_hi
         0x01, // DAT_01558e48
         0x00, // padding
         VM_CMD_PARSER_SWITCH_INDEX_VAL & 0xff, // FP_INDEX_lo
