@@ -2,10 +2,10 @@ cd "$(dirname "$0")"
 
 dvd_ver="300E"
 
-if [ ${1,,} == "3.00j" ]; then
+if [[ "$1" == "3.00j" || "$1" == "3.00J" ]]; then
     echo "Building for DVD Player v3.00J"
     dvd_ver="300J"
-elif [ ${1,,} == "3.00u" ]; then
+elif [[ "$1" == "3.00u" || "$1" == "3.00U" ]]; then
     echo "Building for DVD Player v3.00U"
     dvd_ver="300U"
 else
