@@ -172,6 +172,13 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 #define JUMP_POINTER 0x00688cc8
 #define CMD_DATA_ADDR 0x01316a30
 #define IFO_BUFFER 0x0131a280
+#elif V302J
+#define VM_CMD_PARSER_SWITCH_ADDR 0x00685f78
+#define VM_ADDR 0x01149740
+#define VOB_BUFFER_ADDR 0x01152140
+#define JUMP_POINTER 0x0068ae40
+#define CMD_DATA_ADDR 0x011436b0
+#define IFO_BUFFER 0x01146f00
 #endif
 
 #define CTRL_DATA_ADDR (VOB_BUFFER_ADDR + 0x0c + 0x629)

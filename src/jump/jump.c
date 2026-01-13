@@ -14,6 +14,8 @@
 #define RBI_ADDR 0x002566b8
 #elif V302G
 #define RBI_ADDR 0x002566b8
+#elif V302J
+#define RBI_ADDR 0x00256330
 #endif
 
 typedef int (*readBufferInternal_t)(char *, int, int, void *, int, int);
