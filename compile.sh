@@ -26,6 +26,9 @@ elif [[ "$1" == "3.02j" || "$1" == "3.02J" ]]; then
 elif [[ "$1" == "3.02k" || "$1" == "3.02K" ]]; then
     echo "Building for DVD Player v3.02K"
     dvd_ver="302K"
+elif [[ "$1" == "3.02u" || "$1" == "3.02U" ]]; then
+    echo "Building for DVD Player v3.02U"
+    dvd_ver="302U"
 else
     echo "Building for DVD Player v3.00E/A"
 fi
