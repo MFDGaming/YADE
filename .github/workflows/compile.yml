@@ -35,6 +35,10 @@ jobs:
         mv build/exploit.iso release/exploit_3.02K.iso
         ./compile.sh 3.02U
         mv build/exploit.iso release/exploit_3.02U.iso
+        ./compile.sh 3.03J
+        mv build/exploit.iso release/exploit_3.03J.iso
+        ./compile.sh 3.03E
+        mv build/exploit.iso release/exploit_3.03E.iso
 
     - name: Upload ISO Artifact
       uses: actions/upload-artifact@v6

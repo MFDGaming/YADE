@@ -15,8 +15,7 @@ void *_sceCd_cd_ncmd;
 int *_sceCd_ncmd_semid;
 
 static u32 readData[6] __attribute__((aligned(64)));
-static u32 _sceCd_rd_intr_data[64] __attribute__((aligned(64)));
-static u32 _sceCd_Read_cur_pos __attribute__((aligned(64)));
+static u32 _sceCd_rd_intr_data[36] __attribute__((aligned(64)));
 
 int sceCdReadDVDV(u32 lbn, u32 nsectors, void *buf, sceCdRMode *rm) {
     if (sceCdNCmdDiskReady() == SCECdNotReady) {
@@ -33,11 +32,13 @@ int sceCdReadDVDV(u32 lbn, u32 nsectors, void *buf, sceCdRMode *rm) {
     readData[4] = (u32)(unsigned long)_sceCd_rd_intr_data;
 
     sceSifWriteBackDCache(buf, nsectors * 2064);
+    sceSifWriteBackDCache(_sceCd_rd_intr_data, sizeof(_sceCd_rd_intr_data));
+    sceSifWriteBackDCache(readData, sizeof(readData));
 
     *sceCdCbfunc_num = CD_NCMD_DVDREAD;
     *_sceCd_c_cb_sem = 1;
 
-    if (sceSifCallRpc(_sceCd_cd_ncmd, CD_NCMD_DVDREAD, 1, readData, 24, NULL, 0, _sceCd_cd_read_intr, _sceCd_rd_intr_data) < 0) {
+    if (sceSifCallRpc(_sceCd_cd_ncmd, CD_NCMD_DVDREAD, 1, readData, sizeof(readData), NULL, 0, _sceCd_cd_read_intr, _sceCd_rd_intr_data) < 0) {
         *sceCdCbfunc_num = 0;
         *_sceCd_c_cb_sem = 0;
         SignalSema(*_sceCd_ncmd_semid);

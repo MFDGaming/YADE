@@ -29,6 +29,12 @@ elif [[ "$1" == "3.02k" || "$1" == "3.02K" ]]; then
 elif [[ "$1" == "3.02u" || "$1" == "3.02U" ]]; then
     echo "Building for DVD Player v3.02U"
     dvd_ver="302U"
+elif [[ "$1" == "3.03e" || "$1" == "3.03E" ]]; then
+    echo "Building for DVD Player v3.03E"
+    dvd_ver="303E"
+elif [[ "$1" == "3.03j" || "$1" == "3.03J" ]]; then
+    echo "Building for DVD Player v3.03J"
+    dvd_ver="303J"
 else
     echo "Building for DVD Player v3.00E/A"
 fi
@@ -113,6 +119,7 @@ cp build/code.bin build/fs/VIDEO_TS/VIDEO_TS.BUP
 cp build/fs/VIDEO_TS/VTS_01_1.VOB build/fs/VIDEO_TS/VTS_02_1.VOB
 cp build/fs/VIDEO_TS/VTS_01_1.VOB build/fs/VIDEO_TS/VTS_03_1.VOB
 cp build/fs/VIDEO_TS/VTS_01_1.VOB build/fs/VIDEO_TS/VTS_04_1.VOB
+cp build/fs/VIDEO_TS/VTS_04_0.IFO build/fs/VIDEO_TS/VTS_04_0.BUP
 
 genisoimage -dvd-video -V "" -o build/exploit.iso build/fs/
 rm fs/VIDEO_TS/VTS_01_0.IFO
