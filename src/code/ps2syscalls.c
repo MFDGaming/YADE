@@ -54,3 +54,11 @@ asm (
     "syscall 0x35 \n"
     "jr $ra"
 );
+
+asm (
+    ".global SignalSema \n"
+    "SignalSema: \n"
+    "li $v1, 0x42 \n"
+    "syscall 0x42 \n"
+    "jr $ra"
+);

@@ -8,5 +8,6 @@ void TerminateThread(int thread_id);
 void ChangeThreadPriority(int thread_id, int priority);
 int GetThreadId(void);
 int CancelWakeupThread(int thread_id);
+int SignalSema(int sema_id);
 
 #endif
