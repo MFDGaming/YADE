@@ -22,6 +22,8 @@ static void setup_pointers() {
     u32 *video_ts_ifo_302u = (u32 *)0x0090c210;
     u32 *video_ts_ifo_303e = (u32 *)0x00923d10;
     u32 *video_ts_ifo_303j = (u32 *)0x0069de10;
+    u32 *video_ts_ifo_304m = (u32 *)0x0095ac70;
+    u32 *video_ts_ifo_304j = (u32 *)0x006d4df0;
 
     elf_off = 516 << 11;
     if (video_ts_ifo_300e[0] == 0x45444956) {
@@ -240,6 +242,42 @@ static void setup_pointers() {
         _sceCd_c_cb_sem = (int *)0x004ec074;
         _sceCd_cd_ncmd = (void *)0x004ed210;
         _sceCd_ncmd_semid = (int *)0x004ec068;
+        return;
+    }
+    if (video_ts_ifo_304m[0] == 0x45444956) {
+        sceSifSyncIop = (sceSifSyncIop_t)0x002914d8;
+        sceSifResetIop = (sceSifResetIop_t)0x00291358;
+        sceSifInitRpc = (sceSifInitRpc_t)0x00208260;
+        sceSifExitRpc = (sceSifExitRpc_t)0x00208400;
+        sceSifCallRpc = (sceSifCallRpc_t)0x00208bc8;
+        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020c2b8;
+        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00263ab0;
+        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00263940;
+        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x002632a8;
+        sceCdSync = (sceCdSync_t)0x00263b48;
+        sceCdDiskReady = (sceCdDiskReady_t)0x002642f0;
+        sceCdCbfunc_num = (int *)0x004ef358;
+        _sceCd_c_cb_sem = (int *)0x004ef334;
+        _sceCd_cd_ncmd = (void *)0x004f04d0;
+        _sceCd_ncmd_semid = (int *)0x004ef328;
+        return;
+    }
+    if (video_ts_ifo_304j[0] == 0x45444956) {
+        sceSifSyncIop = (sceSifSyncIop_t)0x00291a98;
+        sceSifResetIop = (sceSifResetIop_t)0x00291918;
+        sceSifInitRpc = (sceSifInitRpc_t)0x002082a0;
+        sceSifExitRpc = (sceSifExitRpc_t)0x00208440;
+        sceSifCallRpc = (sceSifCallRpc_t)0x00208c08;
+        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020c2f8;
+        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00263ac8;
+        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00263958;
+        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x002632c0;
+        sceCdSync = (sceCdSync_t)0x00263b60;
+        sceCdDiskReady = (sceCdDiskReady_t)0x00264308;
+        sceCdCbfunc_num = (int *)0x004ef8d8;
+        _sceCd_c_cb_sem = (int *)0x004ef8b4;
+        _sceCd_cd_ncmd = (void *)0x004f0a50;
+        _sceCd_ncmd_semid = (int *)0x004ef8a8;
         return;
     }
 }
