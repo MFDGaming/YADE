@@ -41,6 +41,9 @@ elif [[ "$1" == "3.04m" || "$1" == "3.04M" ]]; then
 elif [[ "$1" == "3.04j" || "$1" == "3.04J" ]]; then
     echo "Building for DVD Player v3.04J"
     dvd_ver="304J"
+elif [[ "$1" == "3.10" ]]; then
+    echo "Building for DVD Player v3.10"
+    dvd_ver="310X"
 else
     echo "Building for DVD Player v3.00E/A"
 fi
@@ -120,7 +123,7 @@ cp --recursive fs build/
 
 ./build/injector.elf
 
-truncate -s 8192 build/code.bin
+truncate -s $(wc -c < "build/fs/VIDEO_TS/VIDEO_TS.IFO") build/code.bin
 cp build/code.bin build/fs/VIDEO_TS/VIDEO_TS.BUP
 cp build/fs/VIDEO_TS/VTS_01_1.VOB build/fs/VIDEO_TS/VTS_02_1.VOB
 cp build/fs/VIDEO_TS/VTS_01_1.VOB build/fs/VIDEO_TS/VTS_03_1.VOB

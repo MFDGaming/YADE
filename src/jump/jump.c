@@ -28,6 +28,8 @@
 #define RBI_ADDR 0x00261548
 #elif V304J
 #define RBI_ADDR 0x00261560
+#elif V310X
+#define RBI_ADDR 0x002986a0
 #endif
 
 typedef int (*readBufferInternal_t)(char *, int, int, void *, int, int);
@@ -52,7 +54,11 @@ __attribute__((section(".text.boot")))
 void _start(void) {
     asm ("la $sp, 0x70004000");
     killAllThreads();
+#if V310X
+    readBufferInternal("", 0, 28, code, 3, 0);
+#else
     readBufferInternal("", 0, 4, code, 3, 0);
+#endif
     FlushCache(0);
     FlushCache(2);
     code();

