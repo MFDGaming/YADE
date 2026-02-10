@@ -1,372 +1,158 @@
 #include "ps2syscalls.h"
 #include "ps2elf.h"
-#include "ps2int.h"
 #include "ps2cstd.h"
-#include "ps2iop.h"
-#include "ps2rpc.h"
-#include "ps2cdvd.h"
+#include "ps2sif.h"
 
-int no_reset = 0;
-int elf_off;
+#ifndef BOOT_FILE_SIZE
+#define BOOT_FILE_SIZE 0
+#endif
+#define BOOT_FILE_SC ((BOOT_FILE_SIZE >> 11) + ((BOOT_FILE_SIZE % 0x800) ? 1 : 0))
+
+int elf_rsect;
+
+typedef int (*readBufferInternal_t)(char *, int, int, void *, int, int);
+readBufferInternal_t readBufferInternal;
 
 static void setup_pointers() {
-    u32 *video_ts_ifo_300e = (u32 *)0x009091a0;
-    u32 *video_ts_ifo_300u = (u32 *)0x009090a0;
-    u32 *video_ts_ifo_300j = (u32 *)0x00684920;
-    u32 *video_ts_ifo_302e = (u32 *)0x0090c310;
-    u32 *video_ts_ifo_302c = (u32 *)0x006ee290;
-    u32 *video_ts_ifo_302d = (u32 *)0x00678410;
-    u32 *video_ts_ifo_302g = (u32 *)0x00683d90;
-    u32 *video_ts_ifo_302j = (u32 *)0x00685f10;
-    u32 *video_ts_ifo_302k = (u32 *)0x00682810;
-    u32 *video_ts_ifo_302u = (u32 *)0x0090c210;
-    u32 *video_ts_ifo_303e = (u32 *)0x00923d10;
-    u32 *video_ts_ifo_303j = (u32 *)0x0069de10;
-    u32 *video_ts_ifo_304m = (u32 *)0x0095ac70;
-    u32 *video_ts_ifo_304j = (u32 *)0x006d4df0;
+    unsigned int *video_ts_ifo_300e = (unsigned int *)0x009091a0;
+    unsigned int *video_ts_ifo_300u = (unsigned int *)0x009090a0;
+    unsigned int *video_ts_ifo_300j = (unsigned int *)0x00684920;
+    unsigned int *video_ts_ifo_302e = (unsigned int *)0x0090c310;
+    unsigned int *video_ts_ifo_302c = (unsigned int *)0x006ee290;
+    unsigned int *video_ts_ifo_302d = (unsigned int *)0x00678410;
+    unsigned int *video_ts_ifo_302g = (unsigned int *)0x00683d90;
+    unsigned int *video_ts_ifo_302j = (unsigned int *)0x00685f10;
+    unsigned int *video_ts_ifo_302k = (unsigned int *)0x00682810;
+    unsigned int *video_ts_ifo_302u = (unsigned int *)0x0090c210;
+    unsigned int *video_ts_ifo_303e = (unsigned int *)0x00923d10;
+    unsigned int *video_ts_ifo_303j = (unsigned int *)0x0069de10;
+    unsigned int *video_ts_ifo_304m = (unsigned int *)0x0095ac70;
+    unsigned int *video_ts_ifo_304j = (unsigned int *)0x006d4df0;
 
-    elf_off = 516 << 11;
+    elf_rsect = 516 - 284;
     if (video_ts_ifo_300e[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00283460;
-        sceSifResetIop = (sceSifResetIop_t)0x002832f8;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207c60;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207e00;
-        sceSifCallRpc = (sceSifCallRpc_t)0x002084a0;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x00209fc0;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00268a58;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x002688e8;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x002682ac;
-        sceCdSync = (sceCdSync_t)0x00268af0;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00268ff0;
-        sceCdCbfunc_num = (int *)0x008c9114;
-        _sceCd_c_cb_sem = (int *)0x008c90f0;
-        _sceCd_cd_ncmd = (void *)0x008ca290;
-        _sceCd_ncmd_semid = (int *)0x008c90e8;
+        readBufferInternal = (readBufferInternal_t)0x00244438;
         return;
     }
     if (video_ts_ifo_300u[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00283340;
-        sceSifResetIop = (sceSifResetIop_t)0x002831d8;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207c60;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207e00;
-        sceSifCallRpc = (sceSifCallRpc_t)0x002084a0;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x00209fc0;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00268938;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x002687c8;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00268190;
-        sceCdSync = (sceCdSync_t)0x002689d0;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00268ed0;
-        sceCdCbfunc_num = (int *)0x008c9014;
-        _sceCd_c_cb_sem = (int *)0x008c8ff0;
-        _sceCd_cd_ncmd = (void *)0x008ca190;
-        _sceCd_ncmd_semid = (int *)0x008c8fe8;
-        no_reset = 1; // For some reason 3.00U breaks if the IOP is reset
+        readBufferInternal = (readBufferInternal_t)0x00244378;
         return;
     }
     if (video_ts_ifo_300j[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x002834f0;
-        sceSifResetIop = (sceSifResetIop_t)0x00283388;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207c60;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207e00;
-        sceSifCallRpc = (sceSifCallRpc_t)0x002084a0;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x00209fc0;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00268ae0;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00268970;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00268338;
-        sceCdSync = (sceCdSync_t)0x00268b78;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00269078;
-        sceCdCbfunc_num = (int *)0x00644894;
-        _sceCd_c_cb_sem = (int *)0x00644870;
-        _sceCd_cd_ncmd = (void *)0x00645a10;
-        _sceCd_ncmd_semid = (int *)0x00644868;
+        readBufferInternal = (readBufferInternal_t)0x00244018;
         return;
     }
     if (video_ts_ifo_302e[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00284d00;
-        sceSifResetIop = (sceSifResetIop_t)0x00284b98;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207e80;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208520;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020a040;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00258b00;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00258990;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00258358;
-        sceCdSync = (sceCdSync_t)0x00258b98;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00259098;
-        sceCdCbfunc_num = (int *)0x004d4254;
-        _sceCd_c_cb_sem = (int *)0x004d4230;
-        _sceCd_cd_ncmd = (void *)0x004d53d0;
-        _sceCd_ncmd_semid = (int *)0x004d4228;
+        readBufferInternal = (readBufferInternal_t)0x002566d8;
         return;
     }
     if (video_ts_ifo_302c[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00284f30;
-        sceSifResetIop = (sceSifResetIop_t)0x00284dc8;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207e80;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208520;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020a040;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00258ae0;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00258970;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00258338;
-        sceCdSync = (sceCdSync_t)0x00258b78;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00259078;
-        sceCdCbfunc_num = (int *)0x004d4454;
-        _sceCd_c_cb_sem = (int *)0x004d4430;
-        _sceCd_cd_ncmd = (void *)0x004d55d0;
-        _sceCd_ncmd_semid = (int *)0x004d4428;
+        readBufferInternal = (readBufferInternal_t)0x002566b8;
         return;
     }
     if (video_ts_ifo_302d[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00284d90;
-        sceSifResetIop = (sceSifResetIop_t)0x00284c28;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207e80;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208520;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020a040;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00258ae0;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00258970;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00258338;
-        sceCdSync = (sceCdSync_t)0x00258b78;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00259078;
-        sceCdCbfunc_num = (int *)0x004d42d4;
-        _sceCd_c_cb_sem = (int *)0x004d42b0;
-        _sceCd_cd_ncmd = (void *)0x004d5450;
-        _sceCd_ncmd_semid = (int *)0x004d42a8;
+        readBufferInternal = (readBufferInternal_t)0x002566b8;
         return;
     }
     if (video_ts_ifo_302g[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00284ec0;
-        sceSifResetIop = (sceSifResetIop_t)0x00284d58;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207e80;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208520;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020a040;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00258ae0;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00258970;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00258338;
-        sceCdSync = (sceCdSync_t)0x00258b78;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00259078;
-        sceCdCbfunc_num = (int *)0x004d43d4;
-        _sceCd_c_cb_sem = (int *)0x004d43b0;
-        _sceCd_cd_ncmd = (void *)0x004d5550;
-        _sceCd_ncmd_semid = (int *)0x004d43a8;
+        readBufferInternal = (readBufferInternal_t)0x002566b8;
         return;
     }
     if (video_ts_ifo_302j[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00284dd0;
-        sceSifResetIop = (sceSifResetIop_t)0x00284c68;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207d20;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207ec0;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208560;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020a080;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00258758;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x002585e8;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00257fb0;
-        sceCdSync = (sceCdSync_t)0x002587f0;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00258cf0;
-        sceCdCbfunc_num = (int *)0x004d42d4;
-        _sceCd_c_cb_sem = (int *)0x004d42b0;
-        _sceCd_cd_ncmd = (void *)0x004d5450;
-        _sceCd_ncmd_semid = (int *)0x004d42a8;
+        readBufferInternal = (readBufferInternal_t)0x00256330;
         return;
     }
     if (video_ts_ifo_302k[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00284eb0;
-        sceSifResetIop = (sceSifResetIop_t)0x00284d48;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207ce0;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207e80;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208520;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020a040;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00258ad0;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00258960;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00258328;
-        sceCdSync = (sceCdSync_t)0x00258b68;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00259068;
-        sceCdCbfunc_num = (int *)0x004d43d4;
-        _sceCd_c_cb_sem = (int *)0x004d43b0;
-        _sceCd_cd_ncmd = (void *)0x004d5550;
-        _sceCd_ncmd_semid = (int *)0x004d43a8;
+        readBufferInternal = (readBufferInternal_t)0x002566a8;
         return;
     }
     if (video_ts_ifo_302u[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00284c10;
-        sceSifResetIop = (sceSifResetIop_t)0x00284aa8;
         sceSifInitRpc = (sceSifInitRpc_t)0x00207d20;
         sceSifExitRpc = (sceSifExitRpc_t)0x00207ec0;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208560;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020a080;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00258a90;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00258920;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x002582e8;
-        sceCdSync = (sceCdSync_t)0x00258b28;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00259028;
-        sceCdCbfunc_num = (int *)0x004d4154;
-        _sceCd_c_cb_sem = (int *)0x004d4130;
-        _sceCd_cd_ncmd = (void *)0x004d52d0;
-        _sceCd_ncmd_semid = (int *)0x004d4128;
+        readBufferInternal = (readBufferInternal_t)0x00256668;
         return;
     }
-    elf_off = 544 << 11;
+    elf_rsect = 544 - 284;
     if (video_ts_ifo_303e[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00292138;
-        sceSifResetIop = (sceSifResetIop_t)0x00291fb8;
         sceSifInitRpc = (sceSifInitRpc_t)0x002082a0;
         sceSifExitRpc = (sceSifExitRpc_t)0x00208440;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208c08;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020c2f8;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00264848;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x002646d8;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00264040;
-        sceCdSync = (sceCdSync_t)0x002648e0;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00265088;
-        sceCdCbfunc_num = (int *)0x004ebb98;
-        _sceCd_c_cb_sem = (int *)0x004ebb74;
-        _sceCd_cd_ncmd = (void *)0x004ecd10;
-        _sceCd_ncmd_semid = (int *)0x004ebb68;
+        readBufferInternal = (readBufferInternal_t)0x00262360;
         return;
     }
     if (video_ts_ifo_303j[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00292608;
-        sceSifResetIop = (sceSifResetIop_t)0x00292488;
         sceSifInitRpc = (sceSifInitRpc_t)0x002082a0;
         sceSifExitRpc = (sceSifExitRpc_t)0x00208440;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208c08;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020c2f8;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00264828;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x002646b8;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x00264020;
-        sceCdSync = (sceCdSync_t)0x002648c0;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00265068;
-        sceCdCbfunc_num = (int *)0x004ec098;
-        _sceCd_c_cb_sem = (int *)0x004ec074;
-        _sceCd_cd_ncmd = (void *)0x004ed210;
-        _sceCd_ncmd_semid = (int *)0x004ec068;
+        readBufferInternal = (readBufferInternal_t)0x00262340;
         return;
     }
     if (video_ts_ifo_304m[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x002914d8;
-        sceSifResetIop = (sceSifResetIop_t)0x00291358;
         sceSifInitRpc = (sceSifInitRpc_t)0x00208260;
         sceSifExitRpc = (sceSifExitRpc_t)0x00208400;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208bc8;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020c2b8;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00263ab0;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00263940;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x002632a8;
-        sceCdSync = (sceCdSync_t)0x00263b48;
-        sceCdDiskReady = (sceCdDiskReady_t)0x002642f0;
-        sceCdCbfunc_num = (int *)0x004ef358;
-        _sceCd_c_cb_sem = (int *)0x004ef334;
-        _sceCd_cd_ncmd = (void *)0x004f04d0;
-        _sceCd_ncmd_semid = (int *)0x004ef328;
+        readBufferInternal = (readBufferInternal_t)0x00261548;
         return;
     }
     if (video_ts_ifo_304j[0] == 0x45444956) {
-        sceSifSyncIop = (sceSifSyncIop_t)0x00291a98;
-        sceSifResetIop = (sceSifResetIop_t)0x00291918;
         sceSifInitRpc = (sceSifInitRpc_t)0x002082a0;
         sceSifExitRpc = (sceSifExitRpc_t)0x00208440;
-        sceSifCallRpc = (sceSifCallRpc_t)0x00208c08;
-        sceSifWriteBackDCache = (sceSifWriteBackDCache_t)0x0020c2f8;
-        sceCdNCmdDiskReady = (sceCdNCmdDiskReady_t)0x00263ac8;
-        _sceCd_ncmd_prechk = (_sceCd_ncmd_prechk_t)0x00263958;
-        _sceCd_cd_read_intr = (_sceCd_cd_read_intr_t)0x002632c0;
-        sceCdSync = (sceCdSync_t)0x00263b60;
-        sceCdDiskReady = (sceCdDiskReady_t)0x00264308;
-        sceCdCbfunc_num = (int *)0x004ef8d8;
-        _sceCd_c_cb_sem = (int *)0x004ef8b4;
-        _sceCd_cd_ncmd = (void *)0x004f0a50;
-        _sceCd_ncmd_semid = (int *)0x004ef8a8;
+        readBufferInternal = (readBufferInternal_t)0x00261560;
         return;
-    }
-}
-
-int readSector(int n, u8 *s) {
-    const int max_tries = 30;
-    int tries = 0;
-    sceCdRMode rm;
-    rm.spindlctrl = SCECdSpinNom;
-    rm.datapattern = SCECdSecS2048;
-    rm.trycount = max_tries;
-
-    while (tries < max_tries) {
-		sceCdDiskReady(0);
-		if (sceCdReadDVDV(n, 1, s, &rm)) {
-			break;
-		}
-		++tries;
-	}
-    if (tries == max_tries) {
-		return -1;
-	}
-    sceCdSync(0);
-    return 0;
-}
-
-static void readDiscData(int off, u8 *dest, int len) {
-    u8 tmp[2064];
-    if (len <= 0) {
-        return;
-    }
-    int skip = off & 0x7FF;
-    int s = off >> 11;
-
-    if (skip) {
-        int first = 0x800 - skip;
-        if (first > len) first = len;
-        readSector(s++, tmp);
-        memcpy(dest, &tmp[12+skip], first);
-        dest += first;
-        len -= first;
-    }
-    int sc = len >> 11;
-    for (int i = 0; i < sc; ++i) {
-        readSector(s++, tmp);
-        memcpy(dest, &tmp[12], 0x800);
-        dest += 0x800;
-    }
-    int rem = len - (sc << 11);
-    if (rem > 0) {
-        readSector(s, tmp);
-        memcpy(dest, &tmp[12], rem);
     }
 }
 
 void main() {
-    Elf32_Ehdr ehdr;
+    unsigned char *elf_data = (unsigned char *)0x100000;
+    Elf32_Ehdr *ehdr = (Elf32_Ehdr *)elf_data;
 
-    readDiscData(elf_off, (u8 *)&ehdr, sizeof(Elf32_Ehdr));
+    sceSifInitRpc(0);
+    readBufferInternal("", 0, elf_rsect, elf_data, BOOT_FILE_SC, 0);
+    sceSifExitRpc();
 
     // Validate ELF header
-    if (ehdr.e_phnum > 256 || ehdr.e_phnum == 0) {
-        return;  // Invalid program header count
+    if (ehdr->e_phnum > 256 || ehdr->e_phnum == 0) {
+        Exit(0);  // Invalid program header count
     }
 
-    for (int i = 0; i < ehdr.e_phnum; i++) {
-        Elf32_Phdr phdr;
-        int phdr_off = elf_off + ehdr.e_phoff + (i * sizeof(Elf32_Phdr));
-        readDiscData(phdr_off, (u8 *)&phdr, sizeof(Elf32_Phdr));
-        if (phdr.p_type == PT_LOAD) {
+    for (int i = 0; i < ehdr->e_phnum; ++i) {
+        int phdr_off = ehdr->e_phoff + (i * sizeof(Elf32_Phdr));
+        Elf32_Phdr *phdr = (Elf32_Phdr *)(elf_data + phdr_off);
+
+        if (phdr->p_type == PT_LOAD) {
             // Validate segment sizes to prevent overflow
-            if (phdr.p_memsz > 0x2000000 || phdr.p_filesz > phdr.p_memsz) {
+            if (phdr->p_memsz > 0x2000000 || phdr->p_filesz > phdr->p_memsz) {
                 continue;  // Skip invalid segments
             }
-            readDiscData(elf_off + phdr.p_offset, (u8 *)(unsigned long)phdr.p_vaddr, phdr.p_filesz);
-            if(phdr.p_memsz > phdr.p_filesz) {
-                memset((u8 *)(unsigned long)phdr.p_vaddr + phdr.p_filesz, 0, phdr.p_memsz - phdr.p_filesz);
+            memcpy((unsigned char *)(unsigned long)phdr->p_vaddr, elf_data + phdr->p_offset, phdr->p_filesz);
+            if(phdr->p_memsz > phdr->p_filesz) {
+                memset((unsigned char *)(unsigned long)phdr->p_vaddr + phdr->p_filesz, 0, phdr->p_memsz - phdr->p_filesz);
             }
         }
     }
+
     FlushCache(0);
     FlushCache(2);
-    sceSifInitRpc(0);
-    sceSifExitRpc();
-    if (!no_reset) {
-        while (!sceSifResetIop("", 0));
-        while(!sceSifSyncIop());
-    }
-    ExecPS2((void *)(unsigned long)ehdr.e_entry, 0, 0, NULL);
+
+    while (!sceSifResetIop("", 0));
+    while(!sceSifSyncIop());
+
+    ExecPS2((void *)(unsigned long)ehdr->e_entry, 0, 0, NULL);
 }
 
 __attribute__((section(".text.boot")))

@@ -63,6 +63,7 @@ cp fs/VIDEO_TS/VTS_01_0.BUP fs/VIDEO_TS/VTS_04_0.BUP
 cp fs/VIDEO_TS/VTS_01_0.BUP fs/VIDEO_TS/VTS_04_0.IFO
 
 mipsel-none-elf-gcc \
+    -DBOOT_FILE_SIZE=$(wc -c < fs/BOOT.ELF) \
     -T src/ld/code.ld \
     -march=r5900 \
     -mabi=eabi \
@@ -102,8 +103,7 @@ mipsel-none-elf-gcc \
     -Wl,-z,max-page-size=0x1 \
     -o build/jump.elf \
     src/jump/jump.c \
-    src/code/ps2syscalls.c \
-    -I src/code/
+    src/jump/ps2syscalls.c
 
 mipsel-none-elf-objcopy \
     -O binary \
