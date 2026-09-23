@@ -22,7 +22,7 @@ jobs:
         ./compile.sh 3.00J
         mv build/exploit.iso release/exploit_3.00J.iso
         ./compile.sh 3.02E
-        mv build/exploit.iso release/exploit_3.02E.iso
+        mv build/exploit.iso release/exploit_3.02E_3.02A.iso
         ./compile.sh 3.02C
         mv build/exploit.iso release/exploit_3.02C.iso
         ./compile.sh 3.02D
