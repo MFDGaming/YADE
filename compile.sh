@@ -8,8 +8,8 @@ if [[ "$1" == "3.00j" || "$1" == "3.00J" ]]; then
 elif [[ "$1" == "3.00u" || "$1" == "3.00U" ]]; then
     echo "Building for DVD Player v3.00U"
     dvd_ver="300U"
-elif [[ "$1" == "3.02e" || "$1" == "3.02E" ]]; then
-    echo "Building for DVD Player v3.02E"
+elif [[ "$1" == "3.02e" || "$1" == "3.02E" || "$1" == "3.02a" || "$1" == "3.02A" ]]; then
+    echo "Building for DVD Player v3.02E/A"
     dvd_ver="302E"
 elif [[ "$1" == "3.02c" || "$1" == "3.02C" ]]; then
     echo "Building for DVD Player v3.02C"
